@@ -1,0 +1,207 @@
+{
+  "project": "aws-s3-starter",
+  "description": "Librería JAR reusable del framework Saywa. Encapsula S3AsyncClient de AWS SDK 2.x detrás de S3StorageService reactivo (Mutiny Uni<T>). Sin REST, sin main, sin CRT.",
+  "coordinates": {
+    "groupId": "com.saywa.framework",
+    "artifactId": "aws-s3-starter",
+    "parentArtifactId": "saywa-parent-bom",
+    "parentVersion": "1.1.0-SNAPSHOT",
+    "quarkusVersion": "3.33.2.1",
+    "basePackage": "com.saywa.framework.data.s3"
+  },
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_tests_to_close": true,
+    "valid_status": ["pending", "in_progress", "done", "blocked"]
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "pom_and_structure",
+      "title": "pom.xml del módulo y estructura Maven",
+      "description": "pom.xml del starter JAR con parent saywa-parent-bom, dependencia quarkus-amazon-s3 sin versión explícita (gestionada por BOM), quarkus-arc, quarkus-junit5 y mockito-junit-jupiter en scope test.",
+      "acceptance": [
+        "Existe pom.xml con parent com.saywa.framework:saywa-parent-bom:1.1.0-SNAPSHOT",
+        "packaging es jar (no quarkus-app)",
+        "NO hay clase main ni @QuarkusMain",
+        "Dependencia io.quarkiverse.amazonservices:quarkus-amazon-s3 sin versión explícita",
+        "Dependencia io.quarkus:quarkus-arc sin versión explícita",
+        "Test scope: io.quarkus:quarkus-junit5 y org.mockito:mockito-junit-jupiter",
+        "mvn compile -pl . termina sin errores"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 2,
+      "name": "domain_records",
+      "title": "Records de dominio (sin SDK de AWS)",
+      "description": "Cinco records inmutables en domain/ que forman el contrato público del starter. Ninguno importa nada de software.amazon.awssdk. Javadoc completo en cada campo.",
+      "acceptance": [
+        "S3ObjectRequest(String objectKey, byte[] content, String contentType, Map<String,String> metadata) — constructor valida objectKey no blank y content no null",
+        "S3ObjectResponse(String objectKey, String bucketName)",
+        "S3ObjectContent(byte[] content, String contentType)",
+        "S3ObjectSummary(String objectKey, long size, Instant lastModified) — lastModified de java.time.Instant",
+        "S3Operation enum con valores: PUT, GET, DELETE, LIST, COPY, HEAD, PRESIGN",
+        "Ningún record tiene setters — son records Java, inmutables por diseño",
+        "Javadoc real en cada campo (no placeholder)",
+        "Ningún import de software.amazon.awssdk en domain/",
+        "Tests unitarios en unit/com/saywa/framework/data/s3/domain/ validan creación y validaciones del constructor"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 3,
+      "name": "exceptions",
+      "title": "Jerarquía de excepciones y S3ExceptionMapper",
+      "description": "Cuatro excepciones propias más el mapper que convierte excepciones del SDK. Cada excepción tiene (String message, Throwable cause) como único constructor. El mapper preserva siempre la causa.",
+      "acceptance": [
+        "S3StorageException extends RuntimeException con constructor (String message, Throwable cause)",
+        "S3ObjectNotFoundException extends S3StorageException — mismo constructor",
+        "S3AccessDeniedException extends S3StorageException — mismo constructor",
+        "S3ConfigurationException extends S3StorageException — mismo constructor",
+        "S3ExceptionMapper.map(Throwable) devuelve: NoSuchKeyException → S3ObjectNotFoundException, S3Exception con statusCode 403 → S3AccessDeniedException, SdkException configuración → S3ConfigurationException, resto → S3StorageException",
+        "TODAS las ramas preservan el throwable original como causa",
+        "null-check defensivo antes de awsErrorDetails()",
+        "Javadoc en cada clase y en el método map()",
+        "Tests en unit/.../exception/ verifican las cuatro ramas y que exception.getCause() no es null"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 4,
+      "name": "config",
+      "title": "S3Configuration y S3ConfigurationValidator",
+      "description": "@ConfigMapping con prefijo compartamos.storage.s3 y validador que se ejecuta al arrancar.",
+      "acceptance": [
+        "S3Configuration es @ConfigMapping(prefix = 'compartamos.storage.s3') interface",
+        "Métodos: bucketName(), defaultPrefix() @WithDefault(''), auditEnabled() @WithDefault('true'), maxUploadSize() @WithDefault('10485760'), maxDownloadSize() @WithDefault('10485760'), presignedDefaultTtl() @WithDefault('PT15M')",
+        "S3ConfigurationValidator inyecta S3Configuration por constructor (@Inject)",
+        "validate() lanza IllegalArgumentException si: bucket vacío, defaultPrefix nulo, maxUploadSize <= 0, maxDownloadSize <= 0, defaultPrefix contiene '//'",
+        "Javadoc en cada método de S3Configuration",
+        "Tests en unit/.../config/ validan: bucket vacío falla, prefijo con '//' falla, maxUploadSize=0 falla, configuración válida pasa"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 5,
+      "name": "factory_and_mapper",
+      "title": "S3RequestFactory y S3ResponseMapper",
+      "description": "Factory que construye requests del SDK y mapper que convierte respuestas SDK a domain objects.",
+      "acceptance": [
+        "S3RequestFactory @ApplicationScoped, inyecta S3Configuration por constructor",
+        "createPutRequest(S3ObjectRequest) devuelve PutObjectRequest con bucket, key normalizada, contentType, metadata",
+        "createGetRequest(String objectKey) devuelve GetObjectRequest",
+        "createDeleteRequest(String objectKey) devuelve DeleteObjectRequest",
+        "createHeadRequest(String objectKey) devuelve HeadObjectRequest",
+        "createListRequest(String prefix) devuelve ListObjectsV2Request con bucket y prefix resuelto",
+        "normalizeKey(String objectKey) elimina '/' inicial y aplica defaultPrefix si no está ya incluido",
+        "resolvePrefix(String prefix) devuelve prefix normalizado o defaultPrefix si prefix es null/blank",
+        "S3ResponseMapper @ApplicationScoped sin estado",
+        "toResponse(String objectKey, String bucketName) devuelve S3ObjectResponse",
+        "toContent(ResponseBytes<GetObjectResponse> response) devuelve S3ObjectContent",
+        "toSummaries(ListObjectsV2Response response) devuelve List<S3ObjectSummary> con key, size, lastModified",
+        "Tests en unit/.../factory/ y unit/.../mapper/ cubren normalización de keys y prefijos"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 6,
+      "name": "audit",
+      "title": "S3AuditEvent y S3AuditLogger",
+      "description": "Sistema de auditoría reutilizable. Nunca registra contenido, credenciales ni URLs prefirmadas.",
+      "acceptance": [
+        "S3AuditEvent record con campos: S3Operation operation, String bucket, String objectKey, boolean successful, Long durationMs, String errorCode",
+        "S3AuditLogger @ApplicationScoped @Slf4j",
+        "audit(S3AuditEvent event) — si event es null, retorna silenciosamente sin lanzar excepción",
+        "Formato de log: 's3.audit operation={} bucket={} objectKey={} success={} durationMs={} errorCode={}'",
+        "Javadoc explícito: 'nunca debe recibir contenido de archivos, credenciales ni URLs prefirmadas completas'",
+        "Tests en unit/.../audit/ verifican: null event no lanza excepción, log se formatea correctamente"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 7,
+      "name": "service_interface",
+      "title": "Interfaz pública S3StorageService",
+      "description": "Contrato reactivo completo. Todos los métodos devuelven Uni<T>. Javadoc en cada método.",
+      "acceptance": [
+        "Existe src/main/java/.../api/S3StorageService.java",
+        "Métodos: upload(S3ObjectRequest), download(String), list(String), delete(String), copy(String,String), move(String,String), exists(String), presigned(String,Duration)",
+        "Tipos de retorno: Uni<S3ObjectResponse>, Uni<S3ObjectContent>, Uni<List<S3ObjectSummary>>, Uni<Void>, Uni<S3ObjectResponse>, Uni<S3ObjectResponse>, Uni<Boolean>, Uni<String>",
+        "Ningún método en la interfaz expone tipos del SDK de AWS",
+        "Javadoc en cada método: qué hace, qué devuelve, qué excepción lanza y cuándo"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 8,
+      "name": "service_upload_download",
+      "title": "S3StorageServiceImpl — upload() y download()",
+      "description": "Implementación de los dos métodos más críticos con validación de tamaño.",
+      "acceptance": [
+        "S3StorageServiceImpl @ApplicationScoped implementa S3StorageService",
+        "Inyecta por constructor: S3AsyncClient, S3Presigner, S3Configuration, S3RequestFactory, S3ResponseMapper, S3AuditLogger, S3ExceptionMapper, S3ConfigurationValidator",
+        "@PostConstruct llama validator.validate()",
+        "upload(): valida content.length <= maxUploadSize antes de llamar al SDK; si excede → audita (PUT, false) y devuelve Uni.createFrom().failure(); si OK → Uni.createFrom().completionStage(() -> s3AsyncClient.putObject(...))",
+        "download(): hace headObject primero para validar contentLength vs maxDownloadSize; si excede → Uni.failure(S3ConfigurationException); luego getObject con AsyncResponseTransformer.toBytes()",
+        "Ambos métodos mapean errores con exceptionMapper.map() en onFailure().transform()",
+        "Ambos auditan con auditLogger.audit() en onItem() y onFailure()",
+        "Tests en unit/.../service/: upload éxito, upload excede tamaño, download éxito, download excede tamaño, download objeto no encontrado"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 9,
+      "name": "service_list_delete_copy",
+      "title": "S3StorageServiceImpl — list(), delete() y copy()",
+      "description": "Operaciones CRUD restantes.",
+      "acceptance": [
+        "list(String prefix): Uni.createFrom().completionStage(() -> s3AsyncClient.listObjectsV2(...)) con prefix resuelto vía requestFactory.resolvePrefix(); onItem().transform() con responseMapper.toSummaries(); audita LIST",
+        "delete(String objectKey): deleteObject server-side; audita DELETE; devuelve Uni<Void> con replaceWithVoid()",
+        "copy(String sourceKey, String destinationKey): copyObject server-side; audita COPY; devuelve Uni<S3ObjectResponse>",
+        "move(String sourceKey, String destinationKey): implementado como copy().flatMap(response -> delete(sourceKey).map(__ -> response)); si delete falla después de copy exitoso, propaga el error SIN revertir el copy",
+        "Tests cubren: listado vacío, listado con varios objetos, delete éxito, delete error, copy éxito, move éxito, move con delete fallido (copy no se revierte)"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 10,
+      "name": "service_exists_presigned",
+      "title": "S3StorageServiceImpl — exists() y presigned()",
+      "description": "Los dos métodos que usan headObject. presigned() nunca registra la URL en auditoría.",
+      "acceptance": [
+        "exists(String objectKey): headObject; onFailure(NoSuchKeyException.class).recoverWithItem(false); onItem().transform(__ -> true); otros errores se propagan",
+        "presigned(String objectKey, Duration ttl): headObject primero para distinguir 404 de otros errores; luego GetObjectPresignRequest.builder().signatureDuration(effectiveTtl).getObjectRequest(builder -> builder.bucket(...).key(...)).build(); usa S3Presigner INYECTADO — NUNCA s3Presigner.create() dentro del método",
+        "presigned() audita con S3Operation.PRESIGN registrando objectKey y ttl — NUNCA la URL completa",
+        "effectiveTtl = ttl != null ? ttl : configuration.presignedDefaultTtl()",
+        "Tests: exists true, exists false (NoSuchKeyException), exists error propagado, presigned éxito (URL devuelta), presigned objeto no encontrado (S3ObjectNotFoundException), presigned auditoría NO contiene URL completa"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 11,
+      "name": "util",
+      "title": "Utilidades S3KeyUtils y S3ContentTypeUtils",
+      "description": "Helpers para normalización de claves y detección de MIME types.",
+      "acceptance": [
+        "S3KeyUtils.removeLeadingSlash(String value) elimina '/' inicial si existe",
+        "S3KeyUtils.ensureTrailingSlash(String prefix) añade '/' al final si no tiene",
+        "S3ContentTypeUtils.detect(String fileName) devuelve MIME type basado en extensión; si no conoce la extensión devuelve 'application/octet-stream'",
+        "Tests en unit/.../util/ cubren: key con '/', key sin '/', prefix con y sin trailing slash, extensiones conocidas (.pdf, .json, .csv, .png, .txt), extensión desconocida"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 12,
+      "name": "application_properties",
+      "title": "application.properties para tests y README.md",
+      "description": "Properties de test con perfil %dev apuntando a LocalStack y README completo.",
+      "acceptance": [
+        "src/test/resources/application.properties tiene: quarkus.s3.aws.region=us-east-1, quarkus.s3.aws.credentials.type=static, quarkus.s3.aws.credentials.static-provider.access-key-id=test, quarkus.s3.aws.credentials.static-provider.secret-access-key=test, %test.quarkus.s3.endpoint-override=http://localhost:4566",
+        "README.md con: propósito, arquitectura (diagrama ASCII), configuración (tabla de properties), ejemplos de uso de S3StorageService, manejo de errores, auditoría y cómo ejecutar los tests",
+        "Sección en README que documenta que aws-s3-transfer-manager-starter existe como extensión opcional para bulk/multipart"
+      ],
+      "status": "done"
+    }
+  ]
+}

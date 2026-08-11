@@ -1,0 +1,39 @@
+{
+  "$schema_comment": "Hooks automáticos del harness. El agente no puede saltárselos.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mvn compile -q 2>&1 | tail -15",
+            "description": "Tras cada edición, compila y muestra resumen."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./init.sh > /tmp/harness_saywa_s3_deploy_init.log 2>&1 && echo '[harness] init.sh OK' || (echo '[harness] init.sh FALLÓ' && cat /tmp/harness_saywa_s3_deploy_init.log | tail -20)",
+            "description": "Verificación completa al cerrar sesión."
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(./init.sh)",
+      "Bash(docker compose*)",
+      "Bash(mvn compile*)",
+      "Bash(mvn test*)",
+      "Bash(mvn verify*)",
+      "Bash(mvn quarkus:dev*)",
+      "Bash(curl*)"
+    ]
+  }
+}

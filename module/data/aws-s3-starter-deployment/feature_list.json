@@ -1,0 +1,148 @@
+{
+  "project": "aws-s3-starter-deployment",
+  "description": "PoC de consumo y validación operativa del starter aws-s3-starter (Fase 3 del plan Saywa). Aplicación Quarkus REST reactiva (RESTEasy Reactive + Mutiny) que inyecta S3StorageService por CDI y expone endpoints HTTP para validar upload/download/list/delete/copy/move/exists/presigned contra LocalStack en Docker Compose.",
+  "coordinates": {
+    "groupId": "com.saywa.framework",
+    "artifactId": "aws-s3-starter-deployment",
+    "starterDependency": "com.saywa.framework:aws-s3-starter:1.1.0-SNAPSHOT",
+    "quarkusVersion": "3.33.2.1",
+    "basePackage": "com.saywa.framework.deployment.s3",
+    "javaVersion": 21
+  },
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_tests_to_close": true,
+    "valid_status": ["pending", "in_progress", "done", "blocked"],
+    "hard_rules": [
+      "NO reimplementar logica de negocio de S3 aqui: solo consumir S3StorageService por @Inject",
+      "NO usar S3Client / S3AsyncClient directamente en este modulo",
+      "NO usar .join(), .get(), .await().indefinitely() en el flujo de request (rompe el event-loop)",
+      "Los endpoints REST devuelven Uni<RestResponse<T>> o Uni<T>, nunca tipos bloqueantes",
+      "LocalStack se levanta por Docker Compose, nunca contra AWS real"
+    ]
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "pom_and_structure",
+      "title": "pom.xml de la app Quarkus REST + estructura Maven",
+      "description": "pom.xml standalone, Java 21, Quarkus 3.33.2.1, dependencia a aws-s3-starter (jar del starter, resuelto desde .m2 local tras mvn install del starter), quarkus-rest, quarkus-rest-jackson, quarkus-arc.",
+      "acceptance": [
+        "packaging quarkus-app (jar ejecutable con quarkus-maven-plugin)",
+        "Dependencia com.saywa.framework:aws-s3-starter:1.1.0-SNAPSHOT",
+        "Dependencia io.quarkus:quarkus-rest y quarkus-rest-jackson",
+        "maven.compiler.release=21",
+        "mvn quarkus:dev arranca sin errores (requiere LocalStack corriendo o devservices)"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 2,
+      "name": "localstack_compose",
+      "title": "docker-compose.yml con LocalStack (S3)",
+      "description": "Servicio localstack con SERVICES=s3, healthcheck, volumen para persistencia de /var/lib/localstack, script de init que crea el bucket configurado via awslocal.",
+      "acceptance": [
+        "docker compose up -d levanta localstack en :4566",
+        "localstack-init/01-create-bucket.sh crea el bucket al arrancar el contenedor",
+        "healthcheck en /_localstack/health"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 3,
+      "name": "rest_wrapper",
+      "title": "Recurso REST reactivo que envuelve S3StorageService",
+      "description": "S3Resource con @Inject S3StorageService, un endpoint por operacion (upload, download, list, delete, copy, move, exists, presigned), DTOs propios para request/response JSON.",
+      "acceptance": [
+        "POST /s3/objects sube contenido (multipart) -> Uni<RestResponse<S3ObjectResponseDto>>",
+        "GET /s3/objects/{key} descarga -> Uni<RestResponse<byte[]>> con content-type correcto",
+        "GET /s3/objects lista con ?prefix= -> Uni<List<S3ObjectSummaryDto>>",
+        "DELETE /s3/objects/{key} -> Uni<RestResponse<Void>> 204",
+        "POST /s3/objects/{key}/copy?destinationKey= -> Uni<S3ObjectResponseDto>",
+        "POST /s3/objects/{key}/move?destinationKey= -> Uni<S3ObjectResponseDto>",
+        "GET /s3/objects/{key}/exists -> Uni<Boolean>",
+        "GET /s3/objects/{key}/presigned?ttlSeconds= -> Uni<String>",
+        "ExceptionMapper propio traduce S3ObjectNotFoundException->404, S3AccessDeniedException->403, S3ConfigurationException->400, S3StorageException->500",
+        "Ningun bloqueo (.await().indefinitely()) en el flujo de request"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 4,
+      "name": "config_profiles",
+      "title": "application.properties con perfiles dev/test/prod contra LocalStack",
+      "description": "quarkus.s3.endpoint-override apuntando a LocalStack en dev/test, credenciales dummy (test/test), compartamos.storage.s3.bucket-name coherente con localstack-init.",
+      "acceptance": [
+        "%dev y %test fuerzan quarkus.s3.endpoint-override=http://localhost:4566",
+        "quarkus.s3.aws.credentials.type=static con access-key-id/secret-access-key dummy en dev/test",
+        "quarkus.s3.path-style-access=true (requerido por LocalStack)",
+        "compartamos.storage.s3.bucket-name=saywa-s3-deployment-poc coincide con el bucket creado en localstack-init"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 5,
+      "name": "integration_test",
+      "title": "Test de integracion end-to-end contra LocalStack",
+      "description": "@QuarkusTest que sube, lista, descarga, copia, mueve, borra y genera presigned contra el LocalStack real levantado por docker-compose (o Quarkus Dev Services si se habilita).",
+      "acceptance": [
+        "Perfil Maven integration-tests ejecuta src/test/java/integration/",
+        "El test cubre las 8 operaciones del contrato S3StorageService de punta a punta via HTTP",
+        "El test NO usa mocks -- contra LocalStack real",
+        "mvn verify -Pintegration-tests pasa en verde con LocalStack corriendo"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 6,
+      "name": "devservices_note",
+      "title": "Documentar Dev Services de quarkus-amazon-s3 como alternativa rapida",
+      "description": "quarkus-amazon-s3 trae su propio modulo -deployment con un Processor (@BuildStep) que, cuando LaunchMode.current().isDevMode() (o test) y devservices esta habilitado, produce un RunTimeConfigurationDefaultBuildItem con el endpoint-override apuntando a un contenedor LocalStack que la propia extension levanta y destruye automaticamente. Documentar cuando usar esto (loop rapido de desarrollo) vs. el docker-compose explicito (reproducible, CI, integration-tests).",
+      "acceptance": [
+        "docs/architecture.md explica ambos mecanismos y cuando usar cada uno",
+        "application.properties documenta quarkus.s3.devservices.enabled y su relacion con el compose manual"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 7,
+      "name": "dockerfile_app",
+      "title": "Dockerfile de la app deployment (modo JVM) + docker-compose que la integra con LocalStack",
+      "description": "Dockerfile basado en la imagen quarkus JVM estandar, agregado como servicio opcional en docker-compose.yml junto a localstack, con depends_on + healthcheck.",
+      "acceptance": [
+        "docker build -f Dockerfile.jvm construye la imagen tras mvn package",
+        "docker-compose.yml puede levantar app + localstack juntos con --profile app up"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 8,
+      "name": "readme",
+      "title": "README con quickstart, arquitectura y troubleshooting",
+      "description": "Como instalar el starter en .m2, levantar LocalStack, correr la app, probar cada endpoint con curl, y troubleshooting comun.",
+      "acceptance": [
+        "README.md tiene seccion Quickstart con comandos copiables",
+        "README.md tiene ejemplos curl para las 8 operaciones",
+        "README.md explica la diferencia entre docker-compose manual y Dev Services"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 9,
+      "name": "openapi_and_smoke_curl",
+      "title": "OpenAPI exportable a Postman + script de smoke-test curl",
+      "description": "El LocalStack Web App (app.localstack.cloud) requiere cuenta/auth token y no siempre es accesible; en su lugar, quarkus-smallrye-openapi expone /q/openapi (JSON/YAML) para importar directamente en Postman (File > Import) y probar los 8 endpoints con datos de prueba sin depender de esa app. S3Resource se anota explicitamente con MicroProfile OpenAPI (@Tag, @Operation, @Parameter, @RequestBody, @APIResponse/@APIResponses, @Schema) en vez de dejar solo la generacion automatica desde las anotaciones JAX-RS, siguiendo la guia oficial de Quarkus (openapi-swaggerui). Ademas, scripts/smoke-test.sh ejecuta y verifica por curl las 8 operaciones contra la app real corriendo sobre LocalStack, dejando un registro repetible de las mismas pruebas que hace S3ResourceIT pero desde shell.",
+      "acceptance": [
+        "pom.xml agrega io.quarkus:quarkus-smallrye-openapi",
+        "S3Resource anota cada endpoint con @Operation (summary/description), @Parameter para path/query params, @RequestBody para el multipart de upload, y @APIResponse/@APIResponses con schema explicito (incluyendo 404 con ErrorResponseDto y su mediaType correcto)",
+        "quarkus.smallrye-openapi.info-title/info-version/info-description configurados en application.properties (no mp.openapi.extensions.*, que no aplica en Quarkus)",
+        "GET /q/openapi devuelve un documento OpenAPI valido (JSON) que describe los 8 endpoints de S3Resource con sus parametros, request bodies y respuestas tipadas",
+        "GET /q/swagger-ui sirve una UI interactiva (quarkus.swagger-ui.always-include=true, disponible tambien en el jar empaquetado) para probar los endpoints a mano",
+        "scripts/smoke-test.sh ejecuta upload/exists/list/download/copy/move/presigned/delete via curl contra localhost:8080 y termina con exit code distinto de 0 si algun codigo de respuesta HTTP no es el esperado",
+        "El script y el /q/openapi se probaron contra la app real (java -Dquarkus.profile=dev -jar target/quarkus-app/quarkus-run.jar) corriendo sobre LocalStack, sin mocks",
+        "docs/verification.md o README.md documentan como importar /q/openapi en Postman"
+      ],
+      "status": "done"
+    }
+  ]
+}

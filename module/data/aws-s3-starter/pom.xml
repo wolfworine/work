@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.saywa.framework</groupId>
+        <artifactId>saywa-parent-bom</artifactId>
+        <version>1.1.0-SNAPSHOT</version>
+        <relativePath>../../parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aws-s3-starter</artifactId>
+    <packaging>jar</packaging>
+    <name>Saywa AWS S3 Starter</name>
+    <description>Starter base para integraciones con Amazon S3 en servicios Quarkus del framework Saywa.</description>
+
+    <dependencies>
+
+        <!-- Jerarquía de excepciones y contrato de error (ApiError/ErrorType) compartidos del framework -->
+        <dependency>
+            <groupId>com.saywa.framework</groupId>
+            <artifactId>core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Quarkus Amazon S3 (versión gestionada por saywa-parent-bom) -->
+        <dependency>
+            <groupId>io.quarkiverse.amazonservices</groupId>
+            <artifactId>quarkus-amazon-s3</artifactId>
+        </dependency>
+
+        <!-- Quarkus CDI -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+
+        <!-- Lombok: únicamente como annotation processor en tiempo de compilación
+             (@Slf4j genera el campo `log` de org.slf4j.Logger, idéntico al que
+             se declaraba a mano en S3AuditLogger). Scope "provided": no se
+             empaqueta en el JAR final ni se propaga transitivamente a los
+             consumidores del starter. Versión gestionada por saywa-parent-bom. -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+</project>

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.saywa.framework</groupId>
+    <artifactId>aws-s3-starter-deployment</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <name>Saywa AWS S3 Starter — Deployment PoC</name>
+    <description>App Quarkus REST reactiva que consume el starter para validarlo contra LocalStack.</description>
+
+    <properties>
+        <compiler-plugin.version>3.13.0</compiler-plugin.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <!-- Misma línea de Quarkus que el parent de Saywa (saywa-parent-bom) -->
+        <quarkus.platform.version>3.33.2.1</quarkus.platform.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.2</surefire-plugin.version>
+
+        <!-- Coordenadas del starter que este proyecto consume (debe estar en .m2, ver README) -->
+        <starter.artifact-id>aws-s3-starter</starter.artifact-id>
+        <starter.version>1.1.0-SNAPSHOT</starter.version>
+
+        <!-- Versión de saywa-parent-bom importado abajo solo para heredar el
+             dependencyManagement de Lombok (este módulo no lo usa como
+             <parent> porque es un template standalone, ver TEMPLATE.md). -->
+        <saywa.parent-bom.version>1.1.0-SNAPSHOT</saywa.parent-bom.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-amazon-services-bom</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.saywa.framework</groupId>
+                <artifactId>saywa-parent-bom</artifactId>
+                <version>${saywa.parent-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- El starter: única puerta de entrada a S3, expone S3StorageService (Uni<T>) -->
+        <dependency>
+            <groupId>com.saywa.framework</groupId>
+            <artifactId>${starter.artifact-id}</artifactId>
+            <version>${starter.version}</version>
+        </dependency>
+
+        <!-- Jerarquía de excepciones y contrato de error (ApiError/ErrorType) compartidos
+             del framework, usados directamente por mapper/S3ExceptionMappers -->
+        <dependency>
+            <groupId>com.saywa.framework</groupId>
+            <artifactId>core</artifactId>
+            <version>${saywa.parent-bom.version}</version>
+        </dependency>
+
+        <!-- Cliente HTTP async requerido por quarkus-amazon-s3 para producir S3AsyncClient
+             (el starter depende de la extensión pero no de una implementación de transporte
+             concreta; sin esto ArC no puede inyectar S3AsyncClient) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>netty-nio-client</artifactId>
+        </dependency>
+
+        <!-- CDI -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+
+        <!-- RESTEasy Reactive + Jackson (reactivo, sobre Vert.x) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+
+        <!-- OpenAPI (/q/openapi) + Swagger UI (/q/swagger-ui): permite probar los
+             endpoints importando /q/openapi en Postman, sin depender del
+             LocalStack Web App (requiere cuenta/auth token). -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+        </dependency>
+
+        <!-- Lombok: solo para logging (@Slf4j genera el campo `log` de
+             org.slf4j.Logger, el mismo tipo que ya usaba S3ExceptionMappers
+             a mano). Procesador de anotaciones en tiempo de compilación, no
+             aporta nada al classpath en runtime. Versión gestionada por
+             saywa-parent-bom (importado arriba), consistente con aws-s3-starter. -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <!-- Los tests bajo integration/ requieren LocalStack real; se excluyen del
+                         build normal y solo corren vía failsafe con -Pintegration-tests -->
+                    <excludes>
+                        <exclude>**/integration/**</exclude>
+                    </excludes>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+            Perfil que ejecuta src/test/java/integration/ contra LocalStack real
+            (docker compose up -d antes de invocar este perfil).
+        -->
+        <profile>
+            <id>integration-tests</id>
+            <properties>
+                <skipITs>false</skipITs>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/integration/**/*Test.java</include>
+                                <include>**/integration/**/*IT.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

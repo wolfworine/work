@@ -1,0 +1,57 @@
+name: aws-s3-starter-deployment
+
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: aws-s3-starter-deployment-localstack
+    ports:
+      - "4566:4566"      # Edge port: todos los servicios de LocalStack
+    environment:
+      - SERVICES=s3
+      - DEBUG=0
+      - PERSISTENCE=1
+      - DEFAULT_REGION=us-east-1
+      # Credenciales dummy — solo válidas contra LocalStack, nunca AWS real.
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      # Bucket(s) creados automáticamente al arrancar (awslocal via ready.d)
+      - ./localstack-init:/etc/localstack/init/ready.d
+      # Persistencia de datos entre reinicios del contenedor
+      - localstack-data:/var/lib/localstack
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sf",
+          "http://localhost:4566/_localstack/health"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Servicio opcional: la propia app, empaquetada en modo JVM.
+  # Se activa solo con `docker compose --profile app up`.
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile.jvm
+    container_name: aws-s3-starter-deployment-app
+    environment:
+      - QUARKUS_S3_ENDPOINT_OVERRIDE=http://localstack:4566
+      - QUARKUS_S3_AWS_CREDENTIALS_TYPE=static
+      - QUARKUS_S3_AWS_CREDENTIALS_STATIC_PROVIDER_ACCESS_KEY_ID=test
+      - QUARKUS_S3_AWS_CREDENTIALS_STATIC_PROVIDER_SECRET_ACCESS_KEY=test
+      - QUARKUS_S3_PATH_STYLE_ACCESS=true
+      - COMPARTAMOS_STORAGE_S3_BUCKET_NAME=saywa-s3-deployment-poc
+    ports:
+      - "8080:8080"
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+volumes:
+  localstack-data:

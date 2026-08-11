@@ -1,0 +1,26 @@
+####
+# Dockerfile.jvm — imagen JVM de aws-s3-starter-deployment.
+#
+# Build:
+#   mvn -DskipTests package
+#   docker build -f Dockerfile.jvm -t aws-s3-starter-deployment .
+#
+# O directamente vía docker-compose (construye antes de levantar):
+#   mvn -DskipTests package && docker compose --profile app up --build
+####
+FROM registry.access.redhat.com/ubi9/openjdk-21:1.20 AS build
+
+FROM registry.access.redhat.com/ubi9/openjdk-21-runtime:1.20
+ENV LANGUAGE='en_US:en'
+
+COPY --chown=185 target/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185 target/quarkus-app/*.jar /deployments/
+COPY --chown=185 target/quarkus-app/app/ /deployments/app/
+COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+ENTRYPOINT ["java", "-jar", "/deployments/quarkus-run.jar"]

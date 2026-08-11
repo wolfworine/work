@@ -1,0 +1,26 @@
+# Only target/quarkus-app/ (built via `mvn -DskipTests package`) is needed by
+# Dockerfile.jvm's COPY instructions. Docker cannot re-include a path whose
+# parent directory was excluded, so the unneeded target/ subdirectories are
+# excluded individually instead of excluding target/ and negating it back.
+target/classes/
+target/test-classes/
+target/generated-sources/
+target/generated-test-sources/
+target/maven-archiver/
+target/maven-status/
+target/surefire-reports/
+target/failsafe-reports/
+target/*.jar
+
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log
+
+.git/
+.gitignore
+
+docs/
+progress/
+*.md
