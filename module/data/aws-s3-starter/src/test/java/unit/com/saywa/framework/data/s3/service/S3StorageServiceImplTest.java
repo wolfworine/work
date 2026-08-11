@@ -444,7 +444,7 @@ class S3StorageServiceImplTest {
     @Test
     void givenTtlIsNull_whenPresigned_thenUsesConfiguredDefaultTtl() throws MalformedURLException {
         // Arrange
-        when(configuration.presignedDefaultTtl()).thenReturn(Duration.ofMinutes(15));
+        when(configuration.presignedTtl()).thenReturn(Duration.ofMinutes(15));
         lenient().when(s3AsyncClient.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(HeadObjectResponse.builder().contentLength(10L).build()));
         URL presignedUrl = URI.create("https://my-bucket.s3.amazonaws.com/file.json?X-Amz-Signature=abc").toURL();

@@ -126,10 +126,9 @@ por Quarkus/SmallRye Config en `application.properties` (o el
 |---|---|---|---|
 | `compartamos.storage.s3.bucket-name` | `String` | *(sin valor por defecto, obligatoria)* | Nombre del bucket de Amazon S3 sobre el que operará el starter. |
 | `compartamos.storage.s3.default-prefix` | `String` | `""` | Prefijo que se antepone a las claves de objeto cuando la operación no especifica uno propio (por ejemplo, al listar sin prefijo explícito). |
-| `compartamos.storage.s3.audit-enabled` | `boolean` | `true` | Habilita o deshabilita la emisión de eventos de auditoría (`S3AuditLogger`) por cada operación. |
 | `compartamos.storage.s3.max-upload-size` | `long` (bytes) | `10485760` (10 MiB) | Tamaño máximo permitido para el contenido de un `upload()`. Si se excede, la operación falla **antes** de invocar al SDK. |
 | `compartamos.storage.s3.max-download-size` | `long` (bytes) | `10485760` (10 MiB) | Tamaño máximo permitido para el contenido de un `download()`. Se valida contra el `contentLength` obtenido vía `headObject` **antes** de transferir los bytes. |
-| `compartamos.storage.s3.presigned-default-ttl` | `Duration` (ISO-8601) | `PT15M` (15 minutos) | Tiempo de vida por defecto de las URLs prefirmadas cuando `presigned()` no especifica un TTL explícito. |
+| `compartamos.storage.s3.presigned-ttl` | `Duration` (ISO-8601) | `PT15M` (15 minutos) | Tiempo de vida por defecto de las URLs prefirmadas cuando `presigned()` no especifica un TTL explícito. |
 
 Ejemplo mínimo de configuración en la aplicación consumidora:
 
@@ -137,10 +136,9 @@ Ejemplo mínimo de configuración en la aplicación consumidora:
 # Propio del starter
 compartamos.storage.s3.bucket-name=mi-bucket-saywa
 compartamos.storage.s3.default-prefix=documentos
-compartamos.storage.s3.audit-enabled=true
 compartamos.storage.s3.max-upload-size=20971520
 compartamos.storage.s3.max-download-size=20971520
-compartamos.storage.s3.presigned-default-ttl=PT10M
+compartamos.storage.s3.presigned-ttl=PT10M
 
 # Gestionado por quarkus-amazon-s3
 quarkus.s3.aws.region=us-east-1
@@ -232,7 +230,7 @@ public Uni<Boolean> facturaExiste(String objectKey) {
 ```java
 public Uni<String> urlTemporalFactura(String objectKey) {
     return s3StorageService.presigned(objectKey, Duration.ofMinutes(5));
-    // ttl == null usa compartamos.storage.s3.presigned-default-ttl
+    // ttl == null usa compartamos.storage.s3.presigned-ttl
 }
 ```
 
@@ -279,9 +277,8 @@ objeto no exista: devuelve `false`.
 
 ## Auditoría
 
-Si `compartamos.storage.s3.audit-enabled=true` (por defecto), cada
-operación del `S3StorageService` emite un evento de auditoría a través de
-`audit/S3AuditLogger`, usando el record inmutable `audit/S3AuditEvent`:
+Cada operación del `S3StorageService` emite un evento de auditoría a través
+de `audit/S3AuditLogger`, usando el record inmutable `audit/S3AuditEvent`:
 
 ```java
 public record S3AuditEvent(S3Operation operation, String bucket, String objectKey,

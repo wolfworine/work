@@ -3,6 +3,7 @@ package com.saywa.framework.data.s3.config;
 import com.saywa.framework.data.s3.util.S3Constants;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Duration;
 
 /**
  * Validates, when the consuming application starts up, that the
@@ -40,6 +41,7 @@ public class S3ConfigurationValidator {
      *   <li>{@code defaultPrefix()} null.</li>
      *   <li>{@code maxUploadSize()} less than or equal to zero.</li>
      *   <li>{@code maxDownloadSize()} less than or equal to zero.</li>
+     *   <li>{@code presignedTtl()} null or not strictly positive.</li>
      *   <li>{@code defaultPrefix()} contains the sequence {@code "//"}
      *       (indicating a malformed prefix with empty segments).</li>
      * </ol>
@@ -68,6 +70,12 @@ public class S3ConfigurationValidator {
         if (configuration.maxDownloadSize() <= S3Constants.MIN_SIZE_BYTES) {
             throw new IllegalArgumentException(
                     S3Constants.CONFIG_PREFIX + ".max-download-size must be greater than zero");
+        }
+
+        Duration presignedTtl = configuration.presignedTtl();
+        if (presignedTtl == null || !presignedTtl.isPositive()) {
+            throw new IllegalArgumentException(
+                    S3Constants.CONFIG_PREFIX + ".presigned-ttl must be a positive duration");
         }
 
         if (defaultPrefix.contains(S3Constants.DOUBLE_PATH_SEPARATOR)) {

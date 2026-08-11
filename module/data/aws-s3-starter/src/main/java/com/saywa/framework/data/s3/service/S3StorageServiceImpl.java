@@ -285,7 +285,7 @@ public class S3StorageServiceImpl implements S3StorageService {
      * {@code presigned} is (unlike {@link #exists(String)}, which is a public
      * operation audited on its own). If the check succeeds, computes the
      * effective TTL ({@code ttl} if not {@code null}, otherwise
-     * {@link S3Configuration#presignedDefaultTtl()}) and builds the signing
+     * {@link S3Configuration#presignedTtl()}) and builds the signing
      * request with {@link S3RequestFactory#createPresignRequest(String, Duration)}.
      * <p>
      * {@code S3Presigner#presignGetObject(GetObjectPresignRequest)} signs
@@ -427,7 +427,7 @@ public class S3StorageServiceImpl implements S3StorageService {
     // Utilities
 
     private Duration resolveTtl(Duration ttl) {
-        return ttl == null ? configuration.presignedDefaultTtl() : ttl;
+        return ttl == null ? configuration.presignedTtl() : ttl;
     }
 
     private long elapsedMs(long startedAt) {

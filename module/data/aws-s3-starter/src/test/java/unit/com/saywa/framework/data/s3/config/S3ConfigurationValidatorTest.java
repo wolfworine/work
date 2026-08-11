@@ -40,7 +40,7 @@ class S3ConfigurationValidatorTest {
         lenient().when(configuration.defaultPrefix()).thenReturn("");
         lenient().when(configuration.maxUploadSize()).thenReturn(10_485_760L);
         lenient().when(configuration.maxDownloadSize()).thenReturn(10_485_760L);
-        lenient().when(configuration.presignedDefaultTtl()).thenReturn(Duration.ofMinutes(15));
+        lenient().when(configuration.presignedTtl()).thenReturn(Duration.ofMinutes(15));
     }
 
     @Test
@@ -108,6 +108,36 @@ class S3ConfigurationValidatorTest {
         // Arrange
         stubValidDefaults();
         lenient().when(configuration.maxDownloadSize()).thenReturn(0L);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> validator.validate());
+    }
+
+    @Test
+    void givenNullPresignedTtl_whenValidate_thenThrowsIllegalArgumentException() {
+        // Arrange
+        stubValidDefaults();
+        lenient().when(configuration.presignedTtl()).thenReturn(null);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> validator.validate());
+    }
+
+    @Test
+    void givenPresignedTtlZero_whenValidate_thenThrowsIllegalArgumentException() {
+        // Arrange
+        stubValidDefaults();
+        lenient().when(configuration.presignedTtl()).thenReturn(Duration.ZERO);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> validator.validate());
+    }
+
+    @Test
+    void givenPresignedTtlNegative_whenValidate_thenThrowsIllegalArgumentException() {
+        // Arrange
+        stubValidDefaults();
+        lenient().when(configuration.presignedTtl()).thenReturn(Duration.ofMinutes(-1));
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> validator.validate());

@@ -42,16 +42,6 @@ public interface S3Configuration {
     String defaultPrefix();
 
     /**
-     * Indicates whether the starter should emit audit events
-     * ({@code S3AuditLogger}) for every operation performed against S3.
-     *
-     * @return {@code true} if auditing is enabled; {@code true} by default.
-     */
-    @WithDefault("true")
-    @WithName("audit-enabled")
-    boolean auditEnabled();
-
-    /**
      * Maximum size, in bytes, allowed for the content of an upload to S3.
      * If the content exceeds this limit, the operation fails before
      * invoking the SDK.
@@ -72,6 +62,7 @@ public interface S3Configuration {
      *         default.
      */
     @WithDefault(S3Constants.DEFAULT_MAX_OBJECT_SIZE_BYTES)
+    @WithName("max-download-size")
     long maxDownloadSize();
 
     /**
@@ -82,5 +73,6 @@ public interface S3Configuration {
      *         ({@code PT15M}, {@link Duration} ISO-8601 format) by default.
      */
     @WithDefault("PT15M")
-    Duration presignedDefaultTtl();
+    @WithName("presigned-ttl")
+    Duration presignedTtl();
 }
