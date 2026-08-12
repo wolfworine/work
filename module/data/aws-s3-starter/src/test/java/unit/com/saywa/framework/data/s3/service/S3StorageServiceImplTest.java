@@ -441,8 +441,8 @@ class S3StorageServiceImplTest {
         // Critical test (docs/conventions.md): auditing NEVER records the full presigned URL —
         // enforced structurally here, since S3AuditLogger#success(S3Operation, String, String, long)
         // has no parameter capable of carrying a URL; durationMs is the effective TTL, not elapsed time.
-        verify(auditLogger).success(eq(S3Operation.PRESIGN), eq(BUCKET), eq("file.json"),
-                eq(Duration.ofMinutes(30).toMillis()));
+        verify(auditLogger).success(S3Operation.PRESIGN, BUCKET, "file.json",
+                Duration.ofMinutes(30).toMillis());
     }
 
     @Test
@@ -465,8 +465,8 @@ class S3StorageServiceImplTest {
         verify(s3Presigner).presignGetObject(requestCaptor.capture());
         assertEquals(Duration.ofMinutes(15), requestCaptor.getValue().signatureDuration());
 
-        verify(auditLogger).success(eq(S3Operation.PRESIGN), eq(BUCKET), eq("file.json"),
-                eq(Duration.ofMinutes(15).toMillis()));
+        verify(auditLogger).success(S3Operation.PRESIGN, BUCKET, "file.json",
+                Duration.ofMinutes(15).toMillis());
     }
 
     @Test
