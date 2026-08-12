@@ -1,6 +1,7 @@
 package unit.com.saywa.framework.data.s3.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.saywa.framework.data.s3.domain.S3ObjectRequest;
@@ -19,13 +20,34 @@ class S3ObjectRequestTest {
         byte[] content = "hello".getBytes();
 
         // Act
-        var request = new S3ObjectRequest("file.json", content, "application/json", Map.of("k", "v"));
+        var request = new S3ObjectRequest("my-bucket", "file.json", content, "application/json", Map.of("k", "v"));
 
         // Assert
+        assertEquals("my-bucket", request.bucketName());
         assertEquals("file.json", request.objectKey());
         assertEquals(content, request.content());
         assertEquals("application/json", request.contentType());
         assertEquals(Map.of("k", "v"), request.metadata());
+    }
+
+    @Test
+    void givenNullBucketName_whenCreate_thenThrowIllegalArgumentException() {
+        // Arrange
+        byte[] content = "hello".getBytes();
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> new S3ObjectRequest(null, "file.json", content, "application/json", Map.of()));
+    }
+
+    @Test
+    void givenBlankBucketName_whenCreate_thenThrowIllegalArgumentException() {
+        // Arrange
+        byte[] content = "hello".getBytes();
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> new S3ObjectRequest("   ", "file.json", content, "application/json", Map.of()));
     }
 
     @Test
@@ -35,7 +57,7 @@ class S3ObjectRequestTest {
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class,
-                () -> new S3ObjectRequest(null, content, "application/json", Map.of()));
+                () -> new S3ObjectRequest("my-bucket", null, content, "application/json", Map.of()));
     }
 
     @Test
@@ -45,14 +67,14 @@ class S3ObjectRequestTest {
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class,
-                () -> new S3ObjectRequest("   ", content, "application/json", Map.of()));
+                () -> new S3ObjectRequest("my-bucket", "   ", content, "application/json", Map.of()));
     }
 
     @Test
     void givenNullContent_whenCreate_thenThrowIllegalArgumentException() {
         // Act & Assert
         assertThrows(IllegalArgumentException.class,
-                () -> new S3ObjectRequest("file.json", null, "application/json", Map.of()));
+                () -> new S3ObjectRequest("my-bucket", "file.json", null, "application/json", Map.of()));
     }
 
     @Test
@@ -61,11 +83,11 @@ class S3ObjectRequestTest {
         byte[] content = "hello".getBytes();
 
         // Act
-        var request = new S3ObjectRequest("file.json", content, null, null);
+        var request = new S3ObjectRequest("my-bucket", "file.json", content, null, null);
 
         // Assert
         assertEquals("file.json", request.objectKey());
-        assertEquals(null, request.contentType());
-        assertEquals(null, request.metadata());
+        assertNull(request.contentType());
+        assertNull(request.metadata());
     }
 }

@@ -73,12 +73,16 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 /**
  * Unit tests for {@link S3StorageServiceImpl}, focused on
  * {@link S3StorageServiceImpl#upload(S3ObjectRequest)} and
- * {@link S3StorageServiceImpl#download(String)} (feature 8), on
- * {@link S3StorageServiceImpl#list(String)}, {@link S3StorageServiceImpl#delete(String)},
- * {@link S3StorageServiceImpl#copy(String, String)}, and
- * {@link S3StorageServiceImpl#move(String, String)} (feature 9), and on
- * {@link S3StorageServiceImpl#exists(String)} and
- * {@link S3StorageServiceImpl#presigned(String, Duration)} (feature 10).
+ * {@link S3StorageServiceImpl#download(String, String)} (feature 8), on
+ * {@link S3StorageServiceImpl#list(String, String)}, {@link S3StorageServiceImpl#delete(String, String)},
+ * {@link S3StorageServiceImpl#copy(String, String, String)}, and
+ * {@link S3StorageServiceImpl#move(String, String, String)} (feature 9), and on
+ * {@link S3StorageServiceImpl#exists(String, String)} and
+ * {@link S3StorageServiceImpl#presigned(String, String, Duration)} (feature 10).
+ * <p>
+ * {@code bucketName} is required on every call (see {@link S3StorageServiceImpl}'s
+ * Javadoc) — these tests always pass {@link #BUCKET} explicitly; there is no
+ * fallback to a configured default to verify.
  * <p>
  * {@link S3AsyncClient} and {@link S3Presigner} are simulated with Mockito
  * (SDK responses via {@link CompletableFuture#completedFuture} /
@@ -134,7 +138,7 @@ class S3StorageServiceImplTest {
     @Test
     void givenValidRequest_whenUpload_thenReturnsResponseAndAuditsPutSuccess() {
         // Arrange
-        S3ObjectRequest request = new S3ObjectRequest("file.json", "content".getBytes(), "application/json",
+        S3ObjectRequest request = new S3ObjectRequest(BUCKET, "file.json", "content".getBytes(), "application/json",
                 Map.of());
         lenient().when(s3AsyncClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
                 .thenReturn(CompletableFuture.completedFuture(PutObjectResponse.builder().build()));
@@ -153,8 +157,8 @@ class S3StorageServiceImplTest {
     void givenContentExceedsMaxUploadSize_whenUpload_thenFailsWithStorageConfigurationExceptionAndAuditsFailureWithoutCallingSdk() {
         // Arrange
         when(configuration.maxUploadSize()).thenReturn(3L);
-        S3ObjectRequest request = new S3ObjectRequest("file.json", "too-big-content".getBytes(), "application/json",
-                Map.of());
+        S3ObjectRequest request = new S3ObjectRequest(BUCKET, "file.json", "too-big-content".getBytes(),
+                "application/json", Map.of());
 
         // Act
         Uni<S3ObjectResponse> uni = service.upload(request);
@@ -181,7 +185,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.completedFuture(responseBytes));
 
         // Act
-        S3ObjectContent result = service.download("file.json").await().atMost(Duration.ofSeconds(5));
+        S3ObjectContent result = service.download(BUCKET, "file.json").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertArrayEquals(content, result.content());
@@ -198,7 +202,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.completedFuture(HeadObjectResponse.builder().contentLength(50L).build()));
 
         // Act
-        Uni<S3ObjectContent> uni = service.download("big-file.json");
+        Uni<S3ObjectContent> uni = service.download(BUCKET, "big-file.json");
         ExecutionException executionException = assertThrows(ExecutionException.class,
                 () -> uni.subscribeAsCompletionStage().get());
 
@@ -219,7 +223,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.failedFuture(noSuchKeyException));
 
         // Act
-        Uni<S3ObjectContent> uni = service.download("missing.json");
+        Uni<S3ObjectContent> uni = service.download(BUCKET, "missing.json");
         ExecutionException executionException = assertThrows(ExecutionException.class,
                 () -> uni.subscribeAsCompletionStage().get());
 
@@ -238,7 +242,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.completedFuture(ListObjectsV2Response.builder().contents(List.of()).build()));
 
         // Act
-        List<S3ObjectSummary> result = service.list("reports").await().atMost(Duration.ofSeconds(5));
+        List<S3ObjectSummary> result = service.list(BUCKET, "reports").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertTrue(result.isEmpty());
@@ -256,7 +260,7 @@ class S3StorageServiceImplTest {
                         .completedFuture(ListObjectsV2Response.builder().contents(first, second).build()));
 
         // Act
-        List<S3ObjectSummary> result = service.list("reports").await().atMost(Duration.ofSeconds(5));
+        List<S3ObjectSummary> result = service.list(BUCKET, "reports").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertEquals(2, result.size());
@@ -273,7 +277,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.completedFuture(DeleteObjectResponse.builder().build()));
 
         // Act
-        service.delete("file.json").await().atMost(Duration.ofSeconds(5));
+        service.delete(BUCKET, "file.json").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         verify(s3AsyncClient).deleteObject(any(DeleteObjectRequest.class));
@@ -288,7 +292,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.failedFuture(sdkFailure));
 
         // Act
-        Uni<Void> uni = service.delete("file.json");
+        Uni<Void> uni = service.delete(BUCKET, "file.json");
         ExecutionException executionException = assertThrows(ExecutionException.class,
                 () -> uni.subscribeAsCompletionStage().get());
 
@@ -306,7 +310,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.completedFuture(CopyObjectResponse.builder().build()));
 
         // Act
-        S3ObjectResponse result = service.copy("source.json", "destination.json").await().atMost(Duration.ofSeconds(5));
+        S3ObjectResponse result = service.copy(BUCKET, "source.json", "destination.json").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertEquals("destination.json", result.objectKey());
@@ -324,7 +328,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.completedFuture(DeleteObjectResponse.builder().build()));
 
         // Act
-        S3ObjectResponse result = service.move("source.json", "destination.json").await().atMost(Duration.ofSeconds(5));
+        S3ObjectResponse result = service.move(BUCKET, "source.json", "destination.json").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertEquals("destination.json", result.objectKey());
@@ -347,7 +351,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.failedFuture(deleteFailure));
 
         // Act
-        Uni<S3ObjectResponse> uni = service.move("source.json", "destination.json");
+        Uni<S3ObjectResponse> uni = service.move(BUCKET, "source.json", "destination.json");
         ExecutionException executionException = assertThrows(ExecutionException.class,
                 () -> uni.subscribeAsCompletionStage().get());
 
@@ -371,7 +375,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.completedFuture(HeadObjectResponse.builder().contentLength(10L).build()));
 
         // Act
-        Boolean result = service.exists("file.json").await().atMost(Duration.ofSeconds(5));
+        Boolean result = service.exists(BUCKET, "file.json").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertEquals(Boolean.TRUE, result);
@@ -389,7 +393,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.failedFuture(noSuchKeyException));
 
         // Act
-        Boolean result = service.exists("missing.json").await().atMost(Duration.ofSeconds(5));
+        Boolean result = service.exists(BUCKET, "missing.json").await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertEquals(Boolean.FALSE, result);
@@ -405,7 +409,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.failedFuture(sdkFailure));
 
         // Act
-        Uni<Boolean> uni = service.exists("file.json");
+        Uni<Boolean> uni = service.exists(BUCKET, "file.json");
         ExecutionException executionException = assertThrows(ExecutionException.class,
                 () -> uni.subscribeAsCompletionStage().get());
 
@@ -429,7 +433,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(presignedGetObjectRequest);
 
         // Act
-        String result = service.presigned("file.json", Duration.ofMinutes(30)).await().atMost(Duration.ofSeconds(5));
+        String result = service.presigned(BUCKET, "file.json", Duration.ofMinutes(30)).await().atMost(Duration.ofSeconds(5));
 
         // Assert
         assertEquals(presignedUrl.toString(), result);
@@ -454,7 +458,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(presignedGetObjectRequest);
 
         // Act
-        service.presigned("file.json", null).await().atMost(Duration.ofSeconds(5));
+        service.presigned(BUCKET, "file.json", null).await().atMost(Duration.ofSeconds(5));
 
         // Assert
         ArgumentCaptor<GetObjectPresignRequest> requestCaptor = ArgumentCaptor.forClass(GetObjectPresignRequest.class);
@@ -475,7 +479,7 @@ class S3StorageServiceImplTest {
                 .thenReturn(CompletableFuture.failedFuture(noSuchKeyException));
 
         // Act
-        Uni<String> uni = service.presigned("missing.json", Duration.ofMinutes(10));
+        Uni<String> uni = service.presigned(BUCKET, "missing.json", Duration.ofMinutes(10));
         ExecutionException executionException = assertThrows(ExecutionException.class,
                 () -> uni.subscribeAsCompletionStage().get());
 

@@ -4,20 +4,31 @@
 
 Este proyecto **no** es el starter. Es la Fase 3 del plan Saywa: una app
 Quarkus REST reactiva que consume `aws-s3-starter` como dependencia Maven
-para probar sus 8 operaciones en un entorno controlado (LocalStack), sin
-acoplar el starter base a ninguna pila de pruebas.
+para probar sus operaciones (base `/shrd/s3`) en un entorno controlado
+(LocalStack), sin acoplar el starter base a ninguna pila de pruebas.
 
 ```
 Cliente HTTP (curl / Postman / test de integración)
         │
         ▼
-┌─────────────────────────────────────────────┐
-│  aws-s3-starter-deployment (este proyecto)   │
-│  ├── resource/S3Resource                     │  ← RESTEasy Reactive, Uni<T>
-│  ├── dto/*                                   │  ← DTOs JSON (no exponen SDK)
-│  └── mapper/S3ExceptionMappers (RESTEasy)    │  ← StorageException → HTTP
-└──────────────────┬────────────────────────────┘
-                    │ @Inject S3StorageService (Uni<T>)
+┌───────────────────────────────────────────────────────────────┐
+│  aws-s3-starter-deployment (este proyecto)                     │
+│  ├── expose/web/S3Controller     ← RESTEasy Reactive, Uni<T>,   │
+│  │     bucketName/objectKey validados (Bean Validation:        │
+│  │     @Valid @BeanParam / @Valid body / @NotBlank en params)  │
+│  ├── facade/S3Facade(Impl)       ← orquesta, mapea a           │
+│  │     model/api/s3/S3BodyResponse (único tipo de respuesta)   │
+│  ├── service/S3Service(Impl)     ← @Retry en fallos de         │
+│  │     conexión transitorios; el único punto que importa       │
+│  │     com.saywa.framework.data.s3.* del starter                │
+│  ├── service/S3UploadPathResolver ← guard de path-traversal    │
+│  │     para el upload por path (deployment.s3.upload-base-dir) │
+│  ├── model/api/s3/*               ← DTOs JSON (no exponen SDK) │
+│  └── mapper/S3ExceptionMappers    ← StorageException/          │
+│        ConstraintViolationException/IllegalArgumentException   │
+│        → HTTP (SaywaErrorResponse)                             │
+└──────────────────┬───────────────────────────────────────────┘
+                    │ @Inject S3StorageService (Uni<T>, bucketName obligatorio)
 ┌───────────────────▼────────────────────────────┐
 │  aws-s3-starter (JAR, dependencia Maven)        │
 │  domain / service / config / audit /            │
@@ -27,6 +38,10 @@ Cliente HTTP (curl / Postman / test de integración)
                     ▼
              LocalStack (Docker, puerto 4566)
 ```
+
+`bucketName` viaja explícito en cada llamada de principio a fin — no hay
+bucket implícito en ningún punto de la cadena (ver `aws-s3-starter/README.md`
+para la analogía con una conexión a base de datos).
 
 ## Dos formas de correr LocalStack
 
@@ -76,19 +91,41 @@ para no chocar con el contenedor manual del compose).
 
 ## Principios de diseño
 
-- **Este módulo no reimplementa nada del starter.** Solo `@Inject
-  S3StorageService` y traduce a/desde HTTP.
-- **DTOs propios, no domain/ del starter en el body JSON directamente**
-  cuando el tipo no es serializable tal cual (p. ej. `byte[]` de
-  `S3ObjectContent`/`S3ObjectRequest` se maneja como cuerpo binario o
-  `multipart/form-data`, no como campo JSON base64 salvo que se documente
-  explícitamente).
+- **Este módulo no reimplementa nada del starter.** `S3Service` es la
+  única clase que inyecta `S3StorageService` y llama al starter; todo lo
+  demás (Controller, Facade) solo conoce los DTOs propios de
+  `model/api/s3/`.
+- **`bucketName` es obligatorio en cada operación**, validado en el borde
+  HTTP (Bean Validation) antes de llegar al starter — no hay fallback a
+  un bucket configurado por defecto.
+- **Un solo tipo de respuesta, `S3BodyResponse`**, para las 9 operaciones
+  (campos no aplicables quedan `null` según la operación: `url` solo en
+  presigned, `size`/`lastModified` solo en list). Reemplaza los DTOs de
+  respuesta separados que tenía cada endpoint antes de esta iteración.
+- **Dos modos de upload**: en memoria (`S3UploadFormRequest`, multipart) y por
+  path (`S3BodyRequest`, JSON, el servidor lee el archivo de su propio
+  `deployment.s3.upload-base-dir` vía `S3UploadPathResolver`, que rechaza
+  cualquier intento de escapar ese directorio). Son DTOs hermanos —
+  mismos campos `bucketName`/`objectKey`/`contentType`, solo difieren en
+  cómo viaja el contenido — no se pueden unificar en una sola clase
+  porque RESTEasy Reactive los bindea desde `@Consumes` incompatibles
+  (multipart vs JSON).
 - **Reactivo de punta a punta**: el recurso REST nunca bloquea el
-  event-loop; todo el camino son `Uni<T>` encadenados con `.map`/`.chain`.
+  event-loop; todo el camino son `Uni<T>` encadenados con `.map`/`.chain`,
+  y el único I/O bloqueante (leer el archivo en el upload por path) corre
+  en el worker pool (`Infrastructure.getDefaultWorkerPool()`).
+- **`@Retry` en `S3ServiceImpl`**: cada método reintenta hasta 3 veces
+  (200ms de por medio) solo ante `StorageConnectionException` — un
+  problema de red transitorio contra S3/LocalStack vale la pena
+  reintentarlo; un 404/403/validación no (reintentar no cambia el
+  resultado, solo demora la respuesta).
 - **`S3ExceptionMappers`** (`@ServerExceptionMapper` de RESTEasy Reactive, no
   confundir con `StorageExceptionMapper`, el traductor interno SDK→dominio
   del starter) traduce la jerarquía de excepciones de almacenamiento
-  compartida del módulo `core` a códigos HTTP:
+  compartida del módulo `core`, más las fallas de validación propias de
+  este módulo, a códigos HTTP:
   `StorageObjectNotFoundException`→404, `StorageAccessDeniedException`→403,
   `StorageConfigurationException`→400, `StorageConnectionException`→503,
-  `StorageException`→500.
+  `StorageException`→500, `ConstraintViolationException`/`IllegalArgumentException`→400.
+- **`/q/health`** (`quarkus-smallrye-health`) expone liveness/readiness
+  para correr esta app como servicio.

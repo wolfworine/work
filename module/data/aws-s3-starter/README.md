@@ -44,6 +44,14 @@ Todas sus operaciones son **reactivas y no bloqueantes**: cada método
 devuelve un `io.smallrye.mutiny.Uni<T>` que nunca se resuelve internamente
 con `.await().indefinitely()`, `.join()` ni `.get()`.
 
+**`bucketName` es obligatorio en cada llamada.** El starter se comporta
+como una conexión a base de datos: la "conexión" (cliente S3 async,
+presigner, credenciales, región) se establece una sola vez vía
+`quarkus-amazon-s3`, pero cada operación individual indica explícitamente
+contra qué bucket opera — no hay un bucket implícito ni un fallback
+silencioso. `upload()` lo recibe como campo de `S3ObjectRequest`; el resto
+de operaciones lo reciben como primer parámetro.
+
 ## Arquitectura
 
 ```
@@ -124,7 +132,7 @@ por Quarkus/SmallRye Config en `application.properties` (o el
 
 | Propiedad | Tipo | Valor por defecto | Descripción |
 |---|---|---|---|
-| `compartamos.storage.s3.bucket-name` | `String` | *(sin valor por defecto, obligatoria)* | Nombre del bucket de Amazon S3 sobre el que operará el starter. |
+| `compartamos.storage.s3.bucket-name` | `String` | *(sin valor por defecto, obligatoria)* | Se mantiene como configuración obligatoria a nivel de aplicación (validada al arrancar), pero **ya no se usa para resolver el bucket de ninguna operación** — cada llamada a `S3StorageService` indica su propio `bucketName` explícito (ver nota arriba). |
 | `compartamos.storage.s3.default-prefix` | `String` | `""` | Prefijo que se antepone a las claves de objeto cuando la operación no especifica uno propio (por ejemplo, al listar sin prefijo explícito). |
 | `compartamos.storage.s3.max-upload-size` | `long` (bytes) | `10485760` (10 MiB) | Tamaño máximo permitido para el contenido de un `upload()`. Si se excede, la operación falla **antes** de invocar al SDK. |
 | `compartamos.storage.s3.max-download-size` | `long` (bytes) | `10485760` (10 MiB) | Tamaño máximo permitido para el contenido de un `download()`. Se valida contra el `contentLength` obtenido vía `headObject` **antes** de transferir los bytes. |
@@ -161,8 +169,9 @@ como cualquier otro `Uni<T>` de Mutiny.
 @Inject
 S3StorageService s3StorageService;
 
-public Uni<S3ObjectResponse> guardarFactura(byte[] pdf) {
+public Uni<S3ObjectResponse> guardarFactura(String bucketName, byte[] pdf) {
     var request = new S3ObjectRequest(
+            bucketName,
             "facturas/2026/factura-001.pdf",
             pdf,
             "application/pdf",
@@ -175,8 +184,8 @@ public Uni<S3ObjectResponse> guardarFactura(byte[] pdf) {
 ### download — descargar un objeto
 
 ```java
-public Uni<S3ObjectContent> leerFactura(String objectKey) {
-    return s3StorageService.download(objectKey);
+public Uni<S3ObjectContent> leerFactura(String bucketName, String objectKey) {
+    return s3StorageService.download(bucketName, objectKey);
     // S3ObjectContent#content() (byte[]) y #contentType() (String)
 }
 ```
@@ -184,8 +193,8 @@ public Uni<S3ObjectContent> leerFactura(String objectKey) {
 ### list — listar objetos por prefijo
 
 ```java
-public Uni<List<S3ObjectSummary>> listarFacturas2026() {
-    return s3StorageService.list("facturas/2026/");
+public Uni<List<S3ObjectSummary>> listarFacturas2026(String bucketName) {
+    return s3StorageService.list(bucketName, "facturas/2026/");
     // cada S3ObjectSummary expone objectKey(), size() y lastModified() (Instant)
 }
 ```
@@ -193,24 +202,24 @@ public Uni<List<S3ObjectSummary>> listarFacturas2026() {
 ### delete — eliminar un objeto
 
 ```java
-public Uni<Void> eliminarFactura(String objectKey) {
-    return s3StorageService.delete(objectKey);
+public Uni<Void> eliminarFactura(String bucketName, String objectKey) {
+    return s3StorageService.delete(bucketName, objectKey);
 }
 ```
 
 ### copy — copiar un objeto (server-side, dentro del mismo bucket)
 
 ```java
-public Uni<S3ObjectResponse> archivarFactura(String objectKey) {
-    return s3StorageService.copy(objectKey, "archivo/" + objectKey);
+public Uni<S3ObjectResponse> archivarFactura(String bucketName, String objectKey) {
+    return s3StorageService.copy(bucketName, objectKey, "archivo/" + objectKey);
 }
 ```
 
 ### move — mover un objeto (copy + delete)
 
 ```java
-public Uni<S3ObjectResponse> moverAArchivo(String objectKey) {
-    return s3StorageService.move(objectKey, "archivo/" + objectKey);
+public Uni<S3ObjectResponse> moverAArchivo(String bucketName, String objectKey) {
+    return s3StorageService.move(bucketName, objectKey, "archivo/" + objectKey);
     // Si el delete del origen falla tras un copy exitoso, el error se
     // propaga y el objeto queda presente en origen Y destino (ver Arquitectura).
 }
@@ -219,8 +228,8 @@ public Uni<S3ObjectResponse> moverAArchivo(String objectKey) {
 ### exists — comprobar si un objeto existe
 
 ```java
-public Uni<Boolean> facturaExiste(String objectKey) {
-    return s3StorageService.exists(objectKey);
+public Uni<Boolean> facturaExiste(String bucketName, String objectKey) {
+    return s3StorageService.exists(bucketName, objectKey);
     // false si no existe; nunca falla el Uni solo por ausencia del objeto
 }
 ```
@@ -228,8 +237,8 @@ public Uni<Boolean> facturaExiste(String objectKey) {
 ### presigned — generar una URL prefirmada de solo lectura
 
 ```java
-public Uni<String> urlTemporalFactura(String objectKey) {
-    return s3StorageService.presigned(objectKey, Duration.ofMinutes(5));
+public Uni<String> urlTemporalFactura(String bucketName, String objectKey) {
+    return s3StorageService.presigned(bucketName, objectKey, Duration.ofMinutes(5));
     // ttl == null usa compartamos.storage.s3.presigned-ttl
 }
 ```
@@ -254,7 +263,7 @@ Todas exponen el mismo constructor público, `(String message, Throwable cause)`
 por lo que siempre es seguro capturar por la clase base y examinar la causa:
 
 ```java
-s3StorageService.download(objectKey)
+s3StorageService.download(bucketName, objectKey)
     .onFailure(S3ObjectNotFoundException.class).recoverWithItem(this::contenidoPorDefecto)
     .onFailure(S3StorageException.class).invoke(e ->
         log.error("Error al descargar {}: {}", objectKey, e.getMessage(), e.getCause()));

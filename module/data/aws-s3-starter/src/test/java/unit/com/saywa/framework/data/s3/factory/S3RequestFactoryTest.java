@@ -25,7 +25,8 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 
 /**
  * Unit tests for {@link S3RequestFactory}. Verify the construction of each
- * SDK request type and, in particular, key normalization
+ * SDK request type — in particular that {@code bucketName} is required on
+ * every method and travels through unchanged — and key normalization
  * ({@link S3RequestFactory#normalizeKey(String)}) and prefix resolution
  * ({@link S3RequestFactory#resolvePrefix(String)}).
  */
@@ -41,7 +42,6 @@ class S3RequestFactoryTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(configuration.bucketName()).thenReturn(BUCKET);
         lenient().when(configuration.defaultPrefix()).thenReturn("");
         factory = new S3RequestFactory(configuration);
     }
@@ -50,7 +50,7 @@ class S3RequestFactoryTest {
     void givenValidRequest_whenCreatePutRequest_thenReturnsPutObjectRequestWithBucketKeyContentTypeAndMetadata() {
         // Arrange
         Map<String, String> metadata = Map.of("owner", "saywa");
-        S3ObjectRequest request = new S3ObjectRequest("file.json", "content".getBytes(), "application/json", metadata);
+        S3ObjectRequest request = new S3ObjectRequest(BUCKET, "file.json", "content".getBytes(), "application/json", metadata);
 
         // Act
         PutObjectRequest result = factory.createPutRequest(request);
@@ -65,7 +65,7 @@ class S3RequestFactoryTest {
     @Test
     void givenNullContentType_whenCreatePutRequest_thenDetectsContentTypeFromObjectKeyExtension() {
         // Arrange
-        S3ObjectRequest request = new S3ObjectRequest("invoice.pdf", "content".getBytes(), null, Map.of());
+        S3ObjectRequest request = new S3ObjectRequest(BUCKET, "invoice.pdf", "content".getBytes(), null, Map.of());
 
         // Act
         PutObjectRequest result = factory.createPutRequest(request);
@@ -75,9 +75,9 @@ class S3RequestFactoryTest {
     }
 
     @Test
-    void givenObjectKey_whenCreateGetRequest_thenReturnsGetObjectRequestWithBucketAndNormalizedKey() {
+    void givenBucketAndObjectKey_whenCreateGetRequest_thenReturnsGetObjectRequestWithBucketAndNormalizedKey() {
         // Act
-        GetObjectRequest result = factory.createGetRequest("/file.json");
+        GetObjectRequest result = factory.createGetRequest(BUCKET, "/file.json");
 
         // Assert
         assertEquals(BUCKET, result.bucket());
@@ -85,9 +85,21 @@ class S3RequestFactoryTest {
     }
 
     @Test
-    void givenObjectKey_whenCreateDeleteRequest_thenReturnsDeleteObjectRequestWithBucketAndNormalizedKey() {
+    void givenNullBucket_whenCreateGetRequest_thenThrowsIllegalArgumentException() {
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> factory.createGetRequest(null, "file.json"));
+    }
+
+    @Test
+    void givenBlankBucket_whenCreateGetRequest_thenThrowsIllegalArgumentException() {
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> factory.createGetRequest("   ", "file.json"));
+    }
+
+    @Test
+    void givenBucketAndObjectKey_whenCreateDeleteRequest_thenReturnsDeleteObjectRequestWithBucketAndNormalizedKey() {
         // Act
-        DeleteObjectRequest result = factory.createDeleteRequest("/file.json");
+        DeleteObjectRequest result = factory.createDeleteRequest(BUCKET, "/file.json");
 
         // Assert
         assertEquals(BUCKET, result.bucket());
@@ -95,9 +107,15 @@ class S3RequestFactoryTest {
     }
 
     @Test
-    void givenObjectKey_whenCreateHeadRequest_thenReturnsHeadObjectRequestWithBucketAndNormalizedKey() {
+    void givenNullBucket_whenCreateDeleteRequest_thenThrowsIllegalArgumentException() {
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> factory.createDeleteRequest(null, "file.json"));
+    }
+
+    @Test
+    void givenBucketAndObjectKey_whenCreateHeadRequest_thenReturnsHeadObjectRequestWithBucketAndNormalizedKey() {
         // Act
-        HeadObjectRequest result = factory.createHeadRequest("/file.json");
+        HeadObjectRequest result = factory.createHeadRequest(BUCKET, "/file.json");
 
         // Assert
         assertEquals(BUCKET, result.bucket());
@@ -105,9 +123,15 @@ class S3RequestFactoryTest {
     }
 
     @Test
-    void givenSourceAndDestinationKeys_whenCreateCopyRequest_thenReturnsCopyObjectRequestWithBucketAndNormalizedKeys() {
+    void givenNullBucket_whenCreateHeadRequest_thenThrowsIllegalArgumentException() {
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> factory.createHeadRequest(null, "file.json"));
+    }
+
+    @Test
+    void givenBucketAndSourceAndDestinationKeys_whenCreateCopyRequest_thenReturnsCopyObjectRequestWithBucketAndNormalizedKeys() {
         // Act
-        CopyObjectRequest result = factory.createCopyRequest("/source.json", "/destination.json");
+        CopyObjectRequest result = factory.createCopyRequest(BUCKET, "/source.json", "/destination.json");
 
         // Assert
         assertEquals(BUCKET, result.sourceBucket());
@@ -117,12 +141,19 @@ class S3RequestFactoryTest {
     }
 
     @Test
+    void givenNullBucket_whenCreateCopyRequest_thenThrowsIllegalArgumentException() {
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.createCopyRequest(null, "source.json", "destination.json"));
+    }
+
+    @Test
     void givenDefaultPrefixConfigured_whenCreateCopyRequest_thenPrefixIsAppliedToBothSourceAndDestinationKeys() {
         // Arrange
         when(configuration.defaultPrefix()).thenReturn("docs");
 
         // Act
-        CopyObjectRequest result = factory.createCopyRequest("source.json", "archive/destination.json");
+        CopyObjectRequest result = factory.createCopyRequest(BUCKET, "source.json", "archive/destination.json");
 
         // Assert
         assertEquals(BUCKET, result.sourceBucket());
@@ -132,9 +163,9 @@ class S3RequestFactoryTest {
     }
 
     @Test
-    void givenObjectKeyAndTtl_whenCreatePresignRequest_thenReturnsPresignRequestWithSignatureDurationAndNormalizedKey() {
+    void givenBucketAndObjectKeyAndTtl_whenCreatePresignRequest_thenReturnsPresignRequestWithSignatureDurationAndNormalizedKey() {
         // Act
-        GetObjectPresignRequest result = factory.createPresignRequest("/file.json", Duration.ofMinutes(15));
+        GetObjectPresignRequest result = factory.createPresignRequest(BUCKET, "/file.json", Duration.ofMinutes(15));
 
         // Assert
         assertEquals(Duration.ofMinutes(15), result.signatureDuration());
@@ -143,12 +174,22 @@ class S3RequestFactoryTest {
     }
 
     @Test
+    void givenNullBucket_whenCreatePresignRequest_thenThrowsIllegalArgumentException() {
+        // Arrange
+        Duration ttl = Duration.ofMinutes(15);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.createPresignRequest(null, "file.json", ttl));
+    }
+
+    @Test
     void givenDefaultPrefixConfigured_whenCreatePresignRequest_thenPrefixIsAppliedToObjectKey() {
         // Arrange
         when(configuration.defaultPrefix()).thenReturn("docs");
 
         // Act
-        GetObjectPresignRequest result = factory.createPresignRequest("file.json", Duration.ofMinutes(5));
+        GetObjectPresignRequest result = factory.createPresignRequest(BUCKET, "file.json", Duration.ofMinutes(5));
 
         // Assert
         assertEquals(Duration.ofMinutes(5), result.signatureDuration());
@@ -156,13 +197,19 @@ class S3RequestFactoryTest {
     }
 
     @Test
-    void givenPrefix_whenCreateListRequest_thenReturnsListObjectsV2RequestWithBucketAndResolvedPrefix() {
+    void givenBucketAndPrefix_whenCreateListRequest_thenReturnsListObjectsV2RequestWithBucketAndResolvedPrefix() {
         // Act
-        ListObjectsV2Request result = factory.createListRequest("/reports");
+        ListObjectsV2Request result = factory.createListRequest(BUCKET, "/reports");
 
         // Assert
         assertEquals(BUCKET, result.bucket());
         assertEquals("reports", result.prefix());
+    }
+
+    @Test
+    void givenNullBucket_whenCreateListRequest_thenThrowsIllegalArgumentException() {
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> factory.createListRequest(null, "/reports"));
     }
 
     @Test
@@ -171,7 +218,7 @@ class S3RequestFactoryTest {
         when(configuration.defaultPrefix()).thenReturn("docs");
 
         // Act
-        ListObjectsV2Request result = factory.createListRequest(null);
+        ListObjectsV2Request result = factory.createListRequest(BUCKET, null);
 
         // Assert
         assertEquals("docs", result.prefix());

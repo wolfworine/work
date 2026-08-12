@@ -2,13 +2,21 @@
 
 > PoC de consumo y validación operativa de `aws-s3-starter` (Fase 3
 > del plan de desarrollo Saywa). App Quarkus REST reactiva (RESTEasy Reactive
-> + Mutiny, Java 21) que inyecta `S3StorageService` por CDI y expone sus 8
-> operaciones vía HTTP, probadas contra LocalStack en Docker Compose.
+> + Mutiny, Java 21) que inyecta `S3StorageService` por CDI y expone sus
+> operaciones vía HTTP (base `/shrd/s3`), probadas contra LocalStack en
+> Docker Compose.
 
 Este proyecto **no reimplementa nada del starter**: solo lo consume como
 dependencia Maven y traduce HTTP &lt;-&gt; `S3StorageService`. Toda la lógica
 de negocio (validaciones, auditoría, mapeo de errores del SDK) vive en
 `aws-s3-starter`.
+
+`bucketName` es **obligatorio en cada llamada** — no hay bucket implícito
+(ver [Arquitectura](#arquitectura)). El upload tiene 2 modos: en memoria
+(multipart) y por path (el servidor lee un archivo de su propio
+`deployment.s3.upload-base-dir`, con protección contra path-traversal).
+La app también expone `/q/health` (liveness/readiness) y reintenta
+automáticamente (`@Retry`) los fallos de conexión transitorios contra S3.
 
 ## Quickstart
 
@@ -59,34 +67,46 @@ mvn quarkus:dev
 
 La app queda en `http://localhost:8080`.
 
-## Probar los 8 endpoints con curl
+## Probar los endpoints con curl
+
+`bucketName` es obligatorio en los 9 — si falta, 400 con
+`SaywaErrorResponse` (`ConstraintViolationException`).
 
 ```bash
-BASE=http://localhost:8080/s3/objects
+BASE=http://localhost:8080/shrd/s3/bucket
+BUCKET=saywa-s3-deployment-poc
 
-# 1. upload
-curl -s -F "file=@README.md;type=text/markdown" "$BASE?objectKey=docs/readme.md"
+# 1. upload en memoria (multipart)
+curl -s -F "file=@README.md;type=text/markdown" -F "bucketName=$BUCKET" -F "objectKey=docs/readme.md" "$BASE"
 
-# 2. list
-curl -s "$BASE?prefix=docs/"
+# 2. upload por path (el servidor lee el archivo de su propio deployment.s3.upload-base-dir)
+curl -s -X POST -H "Content-Type: application/json" \
+  -d "{\"bucketName\":\"$BUCKET\",\"objectKey\":\"docs/sample.txt\",\"objectFileToLoad\":\"sample.txt\"}" \
+  "$BASE/path"
 
-# 3. download
-curl -s "$BASE/docs/readme.md" -o /tmp/readme-descargado.md
+# 3. list
+curl -s "$BASE?bucketName=$BUCKET&prefix=docs/"
 
-# 4. exists
-curl -s "$BASE/docs/readme.md/exists"
+# 4. download
+curl -s "$BASE/docs/readme.md?bucketName=$BUCKET" -o /tmp/readme-descargado.md
 
-# 5. copy
-curl -s -X POST "$BASE/docs/readme.md/copy?destinationKey=docs/readme-copia.md"
+# 5. exists
+curl -s "$BASE/docs/readme.md/exists?bucketName=$BUCKET"
 
-# 6. move
-curl -s -X POST "$BASE/docs/readme-copia.md/move?destinationKey=docs/readme-movido.md"
+# 6. copy
+curl -s -X POST "$BASE/docs/readme.md/copy?bucketName=$BUCKET&destinationKey=docs/readme-copia.md"
 
-# 7. presigned
-curl -s "$BASE/docs/readme.md/presigned?ttlSeconds=300"
+# 7. move
+curl -s -X POST "$BASE/docs/readme-copia.md/move?bucketName=$BUCKET&destinationKey=docs/readme-movido.md"
 
-# 8. delete
-curl -s -X DELETE -o /dev/null -w "%{http_code}\n" "$BASE/docs/readme-movido.md"
+# 8. presigned
+curl -s "$BASE/docs/readme.md/presigned-url?bucketName=$BUCKET&ttlSeconds=300"
+
+# 9. delete
+curl -s -X DELETE -o /dev/null -w "%{http_code}\n" "$BASE/docs/readme-movido.md?bucketName=$BUCKET"
+
+# health check
+curl -s http://localhost:8080/q/health
 ```
 
 Más ejemplos y el checklist de verificación completo en
@@ -99,8 +119,10 @@ docker compose up -d
 mvn verify -Pintegration-tests
 ```
 
-Cubre el ciclo completo: upload → exists → list → download → 404 esperado →
-copy → move → presigned → delete (`src/test/java/integration/`).
+Cubre el ciclo completo: upload en memoria → upload por path (+ intento de
+traversal rechazado) → exists → list → download → 404 esperado → copy →
+move → presigned → `bucketName` faltante rechazado → bucket no-default
+aislado del bucket por defecto → delete (`src/test/java/integration/`).
 
 Sin Maven, el mismo ciclo se puede correr por curl con
 [`scripts/smoke-test.sh`](scripts/smoke-test.sh) (ver
@@ -116,6 +138,7 @@ expone su propia documentación OpenAPI de los 8 endpoints:
   directo en Postman (**File → Import**, pegando la URL o el archivo).
 - `http://localhost:8080/q/swagger-ui/` — UI interactiva para probar los
   endpoints con datos de prueba desde el navegador, sin Postman.
+- `http://localhost:8080/q/health` — liveness/readiness (`quarkus-smallrye-health`).
 
 Detalle en [`docs/verification.md`](docs/verification.md#4-openapi--postman--alternativa-al-localstack-web-app).
 
@@ -125,15 +148,26 @@ Detalle en [`docs/verification.md`](docs/verification.md#4-openapi--postman--alt
 Cliente HTTP
     │
     ▼
-S3Resource (RESTEasy Reactive, Uni<T>)  ──┐
-S3ExceptionMappers (excepción → HTTP)     │  este proyecto
-    │ @Inject S3StorageService            │
-    ▼                                   ──┘
+S3Controller (RESTEasy Reactive, /shrd/s3, Uni<T>)      ──┐
+    │ @BeanParam validado (S3ParameterRequest /            │
+    │ S3TransferParameterRequest) o body JSON (S3BodyRequest)
+    ▼                                                       │
+S3Facade → construye model/api/s3/S3BodyResponse            │  este proyecto
+    │                                                        │
+    ▼                                                        │
+S3Service (@Retry en fallos de conexión transitorios)        │
+    │ @Inject S3StorageService                                │
+    ▼                                                       ──┘
 aws-s3-starter (JAR, dependencia Maven)
     │ S3AsyncClient / S3Presigner (beans CDI de quarkus-amazon-s3)
     ▼
 LocalStack (Docker, :4566)
 ```
+
+`S3ExceptionMappers` (mapper/) intercepta en paralelo cualquier excepción
+que escape de esa cadena y la traduce a `SaywaErrorResponse` — incluida
+`ConstraintViolationException` (Bean Validation) para los campos
+obligatorios sin mandar.
 
 Detalle completo, incluida la diferencia entre el `docker-compose.yml`
 explícito de este repo y los Dev Services de `quarkus-amazon-s3`, en

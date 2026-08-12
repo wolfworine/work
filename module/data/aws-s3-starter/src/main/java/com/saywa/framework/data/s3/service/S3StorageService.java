@@ -19,6 +19,15 @@ import java.util.List;
  * {@link Uni}, never block the calling thread, and must never be resolved
  * synchronously/blockingly within the starter's own implementation.
  * <p>
+ * Behaves like a connection to a database: the connection itself (the
+ * underlying {@code S3AsyncClient}/{@code S3Presigner}, credentials,
+ * region, timeouts) is established once via {@code S3Configuration}, but
+ * every call states explicitly which bucket it operates on — there is no
+ * implicit default bucket. {@code bucketName} is therefore a required
+ * parameter on every method (or field of {@link S3ObjectRequest} for
+ * {@link #upload(S3ObjectRequest)}); passing {@code null} or a blank value
+ * fails the operation.
+ * <p>
  * Errors are reported as failures of the returned {@link Uni}, using
  * exclusively the framework's shared storage exception hierarchy
  * ({@link StorageException} and its subclasses): never a raw AWS SDK
@@ -28,17 +37,17 @@ public interface S3StorageService {
 
     Uni<S3ObjectResponse> upload(S3ObjectRequest request);
 
-    Uni<S3ObjectContent> download(String objectKey);
+    Uni<S3ObjectContent> download(String bucketName, String objectKey);
 
-    Uni<List<S3ObjectSummary>> list(String prefix);
+    Uni<List<S3ObjectSummary>> list(String bucketName, String prefix);
 
-    Uni<Void> delete(String objectKey);
+    Uni<Void> delete(String bucketName, String objectKey);
 
-    Uni<S3ObjectResponse> copy(String sourceKey, String destinationKey);
+    Uni<S3ObjectResponse> copy(String bucketName, String sourceKey, String destinationKey);
 
-    Uni<S3ObjectResponse> move(String sourceKey, String destinationKey);
+    Uni<S3ObjectResponse> move(String bucketName, String sourceKey, String destinationKey);
 
-    Uni<Boolean> exists(String objectKey);
+    Uni<Boolean> exists(String bucketName, String objectKey);
 
-    Uni<String> presigned(String objectKey, Duration ttl);
+    Uni<String> presigned(String bucketName, String objectKey, Duration ttl);
 }

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.saywa.framework.core.error.exceptions.StorageAccessDeniedException;
+import com.saywa.framework.core.error.exceptions.StorageConfigurationException;
 import com.saywa.framework.core.error.exceptions.StorageConnectionException;
 import com.saywa.framework.core.error.exceptions.StorageGenericException;
 import com.saywa.framework.core.error.exceptions.StorageObjectNotFoundException;
@@ -100,6 +101,21 @@ class S3ExceptionMapperTest {
         assertEquals(StorageGenericException.class, result.getClass());
         assertNotNull(result.getCause());
         assertSame(genericException, result.getCause());
+    }
+
+    @Test
+    void givenIllegalArgumentException_whenMap_thenReturnsStorageConfigurationExceptionWithCause() {
+        // Arrange — e.g. a missing/blank bucketName rejected by
+        // S3RequestFactory/S3ObjectRequest's validation.
+        IllegalArgumentException illegalArgumentException = new IllegalArgumentException("bucketName must not be null or blank");
+
+        // Act
+        RuntimeException result = mapper.map(illegalArgumentException);
+
+        // Assert
+        assertInstanceOf(StorageConfigurationException.class, result);
+        assertNotNull(result.getCause());
+        assertSame(illegalArgumentException, result.getCause());
     }
 
     @Test

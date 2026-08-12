@@ -1,6 +1,7 @@
 package com.saywa.framework.data.s3.exception;
 
 import com.saywa.framework.core.error.exceptions.StorageAccessDeniedException;
+import com.saywa.framework.core.error.exceptions.StorageConfigurationException;
 import com.saywa.framework.core.error.exceptions.StorageConnectionException;
 import com.saywa.framework.core.error.exceptions.StorageException;
 import com.saywa.framework.core.error.exceptions.StorageGenericException;
@@ -37,6 +38,13 @@ public class StorageExceptionMapper {
             case SdkClientException exception -> new StorageConnectionException("Unable to communicate with the storage service", exception);
             case SdkException exception -> new StorageGenericException(S3Constants.S3_REQUEST_FAILED_MESSAGE, exception);
             case StorageException exception -> exception;
+            // Caller-input validation failures (e.g. a missing/blank required
+            // bucketName, enforced by S3RequestFactory/S3ObjectRequest) are a
+            // configuration/request problem, not an unclassified server error —
+            // mapped the same way as the existing max-upload/download-size
+            // violations, so consumers (e.g. aws-s3-starter-deployment) get a
+            // 400 instead of a 500.
+            case IllegalArgumentException exception -> new StorageConfigurationException(exception.getMessage(), exception);
             default -> new StorageGenericException(S3Constants.S3_REQUEST_FAILED_MESSAGE, throwable);
         };
     }

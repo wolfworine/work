@@ -40,6 +40,12 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
  * each operation. No method of this class may block the calling thread:
  * every interaction with the SDK is adapted to {@link Uni} via
  * {@code Uni.createFrom().completionStage(...)}.
+ * <p>
+ * {@code bucketName} is required on every operation (see
+ * {@link S3StorageService}'s Javadoc): this class never falls back to a
+ * configured default bucket, it only uses {@link S3Configuration} for
+ * concerns unrelated to bucket selection ({@code default-prefix},
+ * upload/download size limits, presigned TTL).
  */
 @Slf4j
 @ApplicationScoped
@@ -107,7 +113,7 @@ public class S3StorageServiceImpl implements S3StorageService {
     @PostConstruct
     void initialize() {
         configurationValidator.validate();
-        log.info("S3StorageService initialized for bucket: {}", configuration.bucketName());
+        log.info("S3StorageService initialized (default bucket: {})", configuration.bucketName());
     }
 
     /**
@@ -123,8 +129,8 @@ public class S3StorageServiceImpl implements S3StorageService {
     @Override
     public Uni<S3ObjectResponse> upload(S3ObjectRequest request) {
         long startedAt = System.nanoTime();
+        String bucketName = request.bucketName();
         String objectKey = request.objectKey();
-        String bucketName = configuration.bucketName();
 
         Uni<S3ObjectResponse> uploaded = validateUploadRequest(request)
                 .onItem().transformToUni(this::executeUpload);
@@ -144,13 +150,12 @@ public class S3StorageServiceImpl implements S3StorageService {
      * as {@link S3Operation#GET}.
      */
     @Override
-    public Uni<S3ObjectContent> download(String objectKey) {
+    public Uni<S3ObjectContent> download(String bucketName, String objectKey) {
         long startedAt = System.nanoTime();
         String normalizedKey = requestFactory.normalizeKey(objectKey);
-        String bucketName = configuration.bucketName();
 
-        Uni<S3ObjectContent> downloaded = validateDownloadPreconditions(normalizedKey)
-                .onItem().transformToUni(this::executeDownload);
+        Uni<S3ObjectContent> downloaded = validateDownloadPreconditions(bucketName, normalizedKey)
+                .onItem().transformToUni(validKey -> executeDownload(bucketName, validKey));
 
         return audited(downloaded, S3Operation.GET, bucketName, objectKey, startedAt);
     }
@@ -166,13 +171,12 @@ public class S3StorageServiceImpl implements S3StorageService {
      * and on failure.
      */
     @Override
-    public Uni<List<S3ObjectSummary>> list(String prefix) {
+    public Uni<List<S3ObjectSummary>> list(String bucketName, String prefix) {
         long startedAt = System.nanoTime();
         String resolvedPrefix = requestFactory.resolvePrefix(prefix);
-        String bucketName = configuration.bucketName();
 
         Uni<List<S3ObjectSummary>> listed = Uni.createFrom()
-                .completionStage(() -> s3AsyncClient.listObjectsV2(requestFactory.createListRequest(prefix)))
+                .completionStage(() -> s3AsyncClient.listObjectsV2(requestFactory.createListRequest(bucketName, prefix)))
                 .onItem().transform(responseMapper::toSummaries);
 
         return audited(listed, S3Operation.LIST, bucketName, resolvedPrefix, startedAt);
@@ -188,12 +192,11 @@ public class S3StorageServiceImpl implements S3StorageService {
      * as {@link S3Operation#DELETE}, both on success and on failure.
      */
     @Override
-    public Uni<Void> delete(String objectKey) {
+    public Uni<Void> delete(String bucketName, String objectKey) {
         long startedAt = System.nanoTime();
         String normalizedKey = requestFactory.normalizeKey(objectKey);
-        String bucketName = configuration.bucketName();
 
-        Uni<Void> deleted = executeDelete(normalizedKey).replaceWithVoid();
+        Uni<Void> deleted = executeDelete(bucketName, normalizedKey).replaceWithVoid();
 
         return audited(deleted, S3Operation.DELETE, bucketName, objectKey, startedAt);
     }
@@ -207,13 +210,12 @@ public class S3StorageServiceImpl implements S3StorageService {
      * destination key), both on success and on failure.
      */
     @Override
-    public Uni<S3ObjectResponse> copy(String sourceKey, String destinationKey) {
+    public Uni<S3ObjectResponse> copy(String bucketName, String sourceKey, String destinationKey) {
         long startedAt = System.nanoTime();
         String normalizedSource = requestFactory.normalizeKey(sourceKey);
         String normalizedDestination = requestFactory.normalizeKey(destinationKey);
-        String bucketName = configuration.bucketName();
 
-        Uni<S3ObjectResponse> copied = executeCopy(normalizedSource, normalizedDestination)
+        Uni<S3ObjectResponse> copied = executeCopy(bucketName, normalizedSource, normalizedDestination)
                 .onItem().transform(ignored -> responseMapper.toResponse(normalizedDestination, bucketName));
 
         return audited(copied, S3Operation.COPY, bucketName, destinationKey, startedAt);
@@ -222,19 +224,19 @@ public class S3StorageServiceImpl implements S3StorageService {
     /**
      * {@inheritDoc}
      * <p>
-     * Implemented as {@link #copy(String, String)} followed by
-     * {@link #delete(String)} on the source key, with no automatic
+     * Implemented as {@link #copy(String, String, String)} followed by
+     * {@link #delete(String, String)} on the source key, with no automatic
      * rollback: if the copy fails, {@code delete} is never invoked; if the
      * copy succeeds but {@code delete} fails, the {@code delete} failure is
      * propagated as-is and the copied object is <strong>not</strong>
      * removed from the destination — the object remains present in both
      * the source and the destination, as documented by
-     * {@link S3StorageService#move(String, String)}.
+     * {@link S3StorageService#move(String, String, String)}.
      */
     @Override
-    public Uni<S3ObjectResponse> move(String sourceKey, String destinationKey) {
-        return copy(sourceKey, destinationKey)
-                .chain(response -> delete(sourceKey).onItem().transform(ignored -> response));
+    public Uni<S3ObjectResponse> move(String bucketName, String sourceKey, String destinationKey) {
+        return copy(bucketName, sourceKey, destinationKey)
+                .chain(response -> delete(bucketName, sourceKey).onItem().transform(ignored -> response));
     }
 
     /**
@@ -253,13 +255,12 @@ public class S3StorageServiceImpl implements S3StorageService {
      * so it is handled directly here.
      */
     @Override
-    public Uni<Boolean> exists(String objectKey) {
+    public Uni<Boolean> exists(String bucketName, String objectKey) {
         long startedAt = System.nanoTime();
         String normalizedKey = requestFactory.normalizeKey(objectKey);
-        String bucketName = configuration.bucketName();
 
         return Uni.createFrom()
-                .completionStage(() -> s3AsyncClient.headObject(requestFactory.createHeadRequest(normalizedKey)))
+                .completionStage(() -> s3AsyncClient.headObject(requestFactory.createHeadRequest(bucketName, normalizedKey)))
                 .onItem().transform(response -> {
                     auditLogger.success(S3Operation.HEAD, bucketName, objectKey, elapsedMs(startedAt));
                     return Boolean.TRUE;
@@ -282,11 +283,12 @@ public class S3StorageServiceImpl implements S3StorageService {
      * object ({@link StorageObjectNotFoundException}) from any other failure
      * (for example, a permissions error), before signing anything. This
      * check is not audited separately; only the final result of
-     * {@code presigned} is (unlike {@link #exists(String)}, which is a public
-     * operation audited on its own). If the check succeeds, computes the
-     * effective TTL ({@code ttl} if not {@code null}, otherwise
-     * {@link S3Configuration#presignedTtl()}) and builds the signing
-     * request with {@link S3RequestFactory#createPresignRequest(String, Duration)}.
+     * {@code presigned} is (unlike {@link #exists(String, String)}, which is
+     * a public operation audited on its own). If the check succeeds,
+     * computes the effective TTL ({@code ttl} if not {@code null},
+     * otherwise {@link S3Configuration#presignedTtl()}) and builds the
+     * signing request with
+     * {@link S3RequestFactory#createPresignRequest(String, String, Duration)}.
      * <p>
      * {@code S3Presigner#presignGetObject(GetObjectPresignRequest)} signs
      * the URL locally and synchronously (it makes no network call to
@@ -305,13 +307,12 @@ public class S3StorageServiceImpl implements S3StorageService {
      * {@link #audited(Uni, S3Operation, String, String, long)} either.
      */
     @Override
-    public Uni<String> presigned(String objectKey, Duration ttl) {
+    public Uni<String> presigned(String bucketName, String objectKey, Duration ttl) {
         Duration effectiveTtl = resolveTtl(ttl);
         String normalizedKey = requestFactory.normalizeKey(objectKey);
-        String bucketName = configuration.bucketName();
 
-        return validateObjectExists(normalizedKey)
-                .onItem().transformToUni(validKey -> executePresign(validKey, effectiveTtl))
+        return validateObjectExists(bucketName, normalizedKey)
+                .onItem().transformToUni(validKey -> executePresign(bucketName, validKey, effectiveTtl))
                 .onItem().invoke(url -> auditLogger.success(S3Operation.PRESIGN, bucketName, objectKey, effectiveTtl.toMillis()))
                 .onFailure().transform(throwable -> {
                     auditLogger.failure(S3Operation.PRESIGN, bucketName, objectKey, effectiveTtl.toMillis(), throwable);
@@ -329,15 +330,15 @@ public class S3StorageServiceImpl implements S3StorageService {
         return Uni.createFrom().item(request);
     }
 
-    private Uni<String> validateObjectExists(String objectKey) {
+    private Uni<String> validateObjectExists(String bucketName, String objectKey) {
         return Uni.createFrom()
-                .completionStage(() -> s3AsyncClient.headObject(requestFactory.createHeadRequest(objectKey)))
+                .completionStage(() -> s3AsyncClient.headObject(requestFactory.createHeadRequest(bucketName, objectKey)))
                 .onItem().transform(ignored -> objectKey);
     }
 
-    private Uni<String> validateDownloadPreconditions(String objectKey) {
+    private Uni<String> validateDownloadPreconditions(String bucketName, String objectKey) {
         return Uni.createFrom()
-                .completionStage(() -> s3AsyncClient.headObject(requestFactory.createHeadRequest(objectKey)))
+                .completionStage(() -> s3AsyncClient.headObject(requestFactory.createHeadRequest(bucketName, objectKey)))
                 .onItem().transformToUni(headResponse -> {
                     long contentLength = headResponse.contentLength() != null ? headResponse.contentLength() : 0L;
 
@@ -359,31 +360,31 @@ public class S3StorageServiceImpl implements S3StorageService {
                         requestFactory.createPutRequest(request),
                         requestFactory.createRequestBody(request.content())))
                 .onItem().transform(ignored -> responseMapper.toResponse(normalizedKey,
-                        configuration.bucketName()));
+                        request.bucketName()));
     }
 
-    private Uni<S3ObjectContent> executeDownload(String objectKey) {
+    private Uni<S3ObjectContent> executeDownload(String bucketName, String objectKey) {
         return Uni.createFrom()
                 .completionStage(() -> s3AsyncClient.getObject(
-                        requestFactory.createGetRequest(objectKey),
+                        requestFactory.createGetRequest(bucketName, objectKey),
                         AsyncResponseTransformer.toBytes()))
                 .onItem().transform(responseMapper::toContent);
     }
 
-    private Uni<DeleteObjectResponse> executeDelete(String objectKey) {
+    private Uni<DeleteObjectResponse> executeDelete(String bucketName, String objectKey) {
         return Uni.createFrom()
                 .completionStage(() -> s3AsyncClient.deleteObject(
-                        requestFactory.createDeleteRequest(objectKey)));
+                        requestFactory.createDeleteRequest(bucketName, objectKey)));
     }
 
-    private Uni<CopyObjectResponse> executeCopy(String sourceKey, String destinationKey) {
+    private Uni<CopyObjectResponse> executeCopy(String bucketName, String sourceKey, String destinationKey) {
         return Uni.createFrom()
                 .completionStage(() -> s3AsyncClient.copyObject(
-                        requestFactory.createCopyRequest(sourceKey, destinationKey)));
+                        requestFactory.createCopyRequest(bucketName, sourceKey, destinationKey)));
     }
 
-    private Uni<String> executePresign(String objectKey, Duration ttl) {
-        GetObjectPresignRequest presignRequest = requestFactory.createPresignRequest(objectKey, ttl);
+    private Uni<String> executePresign(String bucketName, String objectKey, Duration ttl) {
+        GetObjectPresignRequest presignRequest = requestFactory.createPresignRequest(bucketName, objectKey, ttl);
 
         return Uni.createFrom()
                 .item(() -> s3Presigner.presignGetObject(presignRequest).url().toExternalForm());
@@ -393,18 +394,20 @@ public class S3StorageServiceImpl implements S3StorageService {
 
     /**
      * Wraps {@code uni} with the audit-and-map-exceptions behavior shared by
-     * {@link #upload(S3ObjectRequest)}, {@link #download(String)},
-     * {@link #list(String)}, {@link #delete(String)}, and
-     * {@link #copy(String, String)}: on success, audits {@code operation} as
-     * successful with the elapsed time since {@code startedAt}; on failure,
-     * audits it as failed and replaces the failure with the exception
-     * returned by {@link StorageExceptionMapper#map(Throwable)}.
+     * {@link #upload(S3ObjectRequest)}, {@link #download(String, String)},
+     * {@link #list(String, String)}, {@link #delete(String, String)}, and
+     * {@link #copy(String, String, String)}: on success, audits
+     * {@code operation} as successful with the elapsed time since
+     * {@code startedAt}; on failure, audits it as failed and replaces the
+     * failure with the exception returned by
+     * {@link StorageExceptionMapper#map(Throwable)}.
      * <p>
-     * Not used by {@link #exists(String)} (which has a third "not found"
-     * branch that must not be audited as a failure) or
-     * {@link #presigned(String, Duration)} (whose {@code durationMs} is the
-     * effective TTL, not the elapsed time) — both have audit logic specific
-     * enough that sharing this helper would obscure more than it simplifies.
+     * Not used by {@link #exists(String, String)} (which has a third "not
+     * found" branch that must not be audited as a failure) or
+     * {@link #presigned(String, String, Duration)} (whose
+     * {@code durationMs} is the effective TTL, not the elapsed time).
+     * Both have audit logic specific enough that sharing this helper would
+     * obscure more than it simplifies.
      *
      * @param uni        the in-flight operation to audit.
      * @param operation  operation being audited.
@@ -438,5 +441,4 @@ public class S3StorageServiceImpl implements S3StorageService {
         return String.format("Object '%s' (%d bytes) exceeds configured max-%s-size (%d bytes)",
                 objectKey, actualSize, operation, maxSize);
     }
-
 }

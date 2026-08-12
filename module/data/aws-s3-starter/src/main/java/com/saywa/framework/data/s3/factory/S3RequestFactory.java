@@ -50,10 +50,11 @@ public class S3RequestFactory {
      * Builds the upload request ({@code PutObject}) corresponding to a
      * domain {@link S3ObjectRequest}.
      *
-     * @param request domain request with the key, content, MIME type, and
-     *                metadata to send; must not be {@code null} (already
-     *                validated by the record itself).
-     * @return the SDK's {@link PutObjectRequest} with the configured
+     * @param request domain request with the bucket, key, content, MIME
+     *                type, and metadata to send; must not be {@code null}
+     *                (already validated by the record itself, including
+     *                {@code bucketName}).
+     * @return the SDK's {@link PutObjectRequest} with {@code request}'s
      *         bucket, the normalized key ({@link #normalizeKey(String)}),
      *         {@code request}'s metadata, and {@code request}'s
      *         {@code contentType} — or, if that is {@code null}, the MIME
@@ -66,7 +67,7 @@ public class S3RequestFactory {
                 : S3ContentTypeUtils.detect(request.objectKey());
 
         return PutObjectRequest.builder()
-                .bucket(configuration.bucketName())
+                .bucket(request.bucketName())
                 .key(normalizeKey(request.objectKey()))
                 .contentType(contentType)
                 .metadata(request.metadata())
@@ -88,14 +89,16 @@ public class S3RequestFactory {
     /**
      * Builds the download request ({@code GetObject}) for an object key.
      *
-     * @param objectKey key of the object to download, unnormalized; must
-     *                  not be {@code null}.
-     * @return the SDK's {@link GetObjectRequest} with the configured bucket
+     * @param bucketName name of the bucket to operate on; must not be
+     *                   {@code null} or blank.
+     * @param objectKey  key of the object to download, unnormalized; must
+     *                   not be {@code null}.
+     * @return the SDK's {@link GetObjectRequest} with {@code bucketName}
      *         and the normalized key ({@link #normalizeKey(String)}).
      */
-    public GetObjectRequest createGetRequest(String objectKey) {
+    public GetObjectRequest createGetRequest(String bucketName, String objectKey) {
         return GetObjectRequest.builder()
-                .bucket(configuration.bucketName())
+                .bucket(requireBucketName(bucketName))
                 .key(normalizeKey(objectKey))
                 .build();
     }
@@ -103,14 +106,16 @@ public class S3RequestFactory {
     /**
      * Builds the deletion request ({@code DeleteObject}) for an object key.
      *
-     * @param objectKey key of the object to delete, unnormalized; must not
-     *                  be {@code null}.
-     * @return the SDK's {@link DeleteObjectRequest} with the configured
-     *         bucket and the normalized key ({@link #normalizeKey(String)}).
+     * @param bucketName name of the bucket to operate on; must not be
+     *                   {@code null} or blank.
+     * @param objectKey  key of the object to delete, unnormalized; must not
+     *                   be {@code null}.
+     * @return the SDK's {@link DeleteObjectRequest} with {@code bucketName}
+     *         and the normalized key ({@link #normalizeKey(String)}).
      */
-    public DeleteObjectRequest createDeleteRequest(String objectKey) {
+    public DeleteObjectRequest createDeleteRequest(String bucketName, String objectKey) {
         return DeleteObjectRequest.builder()
-                .bucket(configuration.bucketName())
+                .bucket(requireBucketName(bucketName))
                 .key(normalizeKey(objectKey))
                 .build();
     }
@@ -119,40 +124,44 @@ public class S3RequestFactory {
      * Builds the metadata lookup request ({@code HeadObject}) for an object
      * key.
      *
-     * @param objectKey key of the object to query, unnormalized; must not
-     *                  be {@code null}.
-     * @return the SDK's {@link HeadObjectRequest} with the configured
-     *         bucket and the normalized key ({@link #normalizeKey(String)}).
+     * @param bucketName name of the bucket to operate on; must not be
+     *                   {@code null} or blank.
+     * @param objectKey  key of the object to query, unnormalized; must not
+     *                   be {@code null}.
+     * @return the SDK's {@link HeadObjectRequest} with {@code bucketName}
+     *         and the normalized key ({@link #normalizeKey(String)}).
      */
-    public HeadObjectRequest createHeadRequest(String objectKey) {
+    public HeadObjectRequest createHeadRequest(String bucketName, String objectKey) {
         return HeadObjectRequest.builder()
-                .bucket(configuration.bucketName())
+                .bucket(requireBucketName(bucketName))
                 .key(normalizeKey(objectKey))
                 .build();
     }
 
     /**
      * Builds the server-side copy request ({@code CopyObject}) of an object
-     * to another key, within the same configured bucket, without
-     * downloading or re-uploading the content.
+     * to another key, within the given bucket, without downloading or
+     * re-uploading the content.
      *
+     * @param bucketName     name of the bucket used as both source and
+     *                       destination; must not be {@code null} or blank.
      * @param sourceKey      key of the source object, unnormalized; must
      *                       not be {@code null}.
      * @param destinationKey key of the destination object, unnormalized;
      *                       must not be {@code null}.
-     * @return the SDK's {@link CopyObjectRequest} with the configured
-     *         bucket as both source and destination, and both keys
-     *         normalized ({@link #normalizeKey(String)}).
+     * @return the SDK's {@link CopyObjectRequest} with {@code bucketName}
+     *         as both source and destination, and both keys normalized
+     *         ({@link #normalizeKey(String)}).
      */
-    public CopyObjectRequest createCopyRequest(String sourceKey, String destinationKey) {
+    public CopyObjectRequest createCopyRequest(String bucketName, String sourceKey, String destinationKey) {
+        String resolvedBucket = requireBucketName(bucketName);
         String normalizedSource = normalizeKey(sourceKey);
         String normalizedDestination = normalizeKey(destinationKey);
-        String bucketName = configuration.bucketName();
 
         return CopyObjectRequest.builder()
-                .sourceBucket(bucketName)
+                .sourceBucket(resolvedBucket)
                 .sourceKey(normalizedSource)
-                .destinationBucket(bucketName)
+                .destinationBucket(resolvedBucket)
                 .destinationKey(normalizedDestination)
                 .build();
     }
@@ -162,20 +171,24 @@ public class S3RequestFactory {
      * {@code S3Presigner} needs to generate a read-only (GET) presigned URL
      * for an object, with the given time-to-live.
      *
+     * @param bucketName        name of the bucket to operate on; must not
+     *                          be {@code null} or blank.
      * @param objectKey         key of the object to presign, unnormalized;
      *                          must not be {@code null}.
      * @param signatureDuration effective time-to-live (TTL) of the
      *                          presigned URL; must not be {@code null}.
      * @return the SDK's {@link GetObjectPresignRequest}, with
      *         {@code signatureDuration} and an inner {@code GetObjectRequest}
-     *         with the configured bucket and the normalized key
+     *         with {@code bucketName} and the normalized key
      *         ({@link #normalizeKey(String)}).
      */
-    public GetObjectPresignRequest createPresignRequest(String objectKey, Duration signatureDuration) {
+    public GetObjectPresignRequest createPresignRequest(String bucketName, String objectKey, Duration signatureDuration) {
+        String resolvedBucket = requireBucketName(bucketName);
+
         return GetObjectPresignRequest.builder()
                 .signatureDuration(signatureDuration)
                 .getObjectRequest(builder ->
-                        builder.bucket(configuration.bucketName()).
+                        builder.bucket(resolvedBucket).
                                 key(normalizeKey(objectKey)
                                 ))
                 .build();
@@ -185,17 +198,37 @@ public class S3RequestFactory {
      * Builds the listing request ({@code ListObjectsV2}) for a given
      * prefix.
      *
-     * @param prefix prefix to filter by; if {@code null} or blank, it
-     *               resolves to the configuration's default prefix
-     *               ({@link #resolvePrefix(String)}).
-     * @return the SDK's {@link ListObjectsV2Request} with the configured
-     *         bucket and the resolved prefix.
+     * @param bucketName name of the bucket to operate on; must not be
+     *                   {@code null} or blank.
+     * @param prefix     prefix to filter by; if {@code null} or blank, it
+     *                   resolves to the configuration's default prefix
+     *                   ({@link #resolvePrefix(String)}).
+     * @return the SDK's {@link ListObjectsV2Request} with {@code bucketName}
+     *         and the resolved prefix.
      */
-    public ListObjectsV2Request createListRequest(String prefix) {
+    public ListObjectsV2Request createListRequest(String bucketName, String prefix) {
         return ListObjectsV2Request.builder()
-                .bucket(configuration.bucketName())
+                .bucket(requireBucketName(bucketName))
                 .prefix(resolvePrefix(prefix))
                 .build();
+    }
+
+    /**
+     * Validates that {@code bucketName} was explicitly provided by the
+     * caller — every operation must state which bucket it targets, there
+     * is no implicit default (see {@link S3ObjectRequest}'s equivalent
+     * validation for {@code upload}).
+     *
+     * @param bucketName bucket name to validate.
+     * @return {@code bucketName}, unchanged, if valid.
+     * @throws IllegalArgumentException if {@code bucketName} is {@code null}
+     *                                   or blank.
+     */
+    private String requireBucketName(String bucketName) {
+        if (bucketName == null || bucketName.isBlank()) {
+            throw new IllegalArgumentException("bucketName must not be null or blank");
+        }
+        return bucketName;
     }
 
     /**

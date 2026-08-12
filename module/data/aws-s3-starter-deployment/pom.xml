@@ -105,6 +105,29 @@
             <artifactId>quarkus-smallrye-openapi</artifactId>
         </dependency>
 
+        <!-- Jakarta Bean Validation (@Valid, @NotBlank/@NotNull) sobre los
+             request DTOs de model/api/s3 y sobre @BeanParam/@QueryParam del
+             controller -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+
+        <!-- Liveness/readiness (/q/health, /q/health/live, /q/health/ready):
+             necesario para correr esta app como servicio (orquestador,
+             load balancer, etc. necesitan saber si está lista). -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+
+        <!-- Resiliencia (@Retry) sobre las llamadas de S3ServiceImpl al starter,
+             que a su vez llama a S3/LocalStack por red. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+        </dependency>
+
         <!-- Lombok: solo para logging (@Slf4j genera el campo `log` de
              org.slf4j.Logger, el mismo tipo que ya usaba S3ExceptionMappers
              a mano). Procesador de anotaciones en tiempo de compilación, no
@@ -125,6 +148,13 @@
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Mockito para los unit tests de S3FacadeImpl/S3ServiceImpl/S3ExceptionMappers
+             (src/test/java/unit/), consistente con aws-s3-starter -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
