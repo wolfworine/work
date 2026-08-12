@@ -132,7 +132,7 @@ Sin Maven, el mismo ciclo se puede correr por curl con
 
 Si no tienes cuenta en el [LocalStack Web App](https://app.localstack.cloud)
 (requiere `LOCALSTACK_AUTH_TOKEN`) para navegar el bucket con una UI, la app
-expone su propia documentación OpenAPI de los 8 endpoints:
+expone su propia documentación OpenAPI de los 9 endpoints:
 
 - `http://localhost:8080/q/openapi` — documento OpenAPI (JSON), importable
   directo en Postman (**File → Import**, pegando la URL o el archivo).
@@ -167,7 +167,22 @@ LocalStack (Docker, :4566)
 `S3ExceptionMappers` (mapper/) intercepta en paralelo cualquier excepción
 que escape de esa cadena y la traduce a `SaywaErrorResponse` — incluida
 `ConstraintViolationException` (Bean Validation) para los campos
-obligatorios sin mandar.
+obligatorios sin mandar. Usa `@ServerExceptionMapper` de RESTEasy Reactive
+(no `jakarta.ws.rs.ext.ExceptionMapper`) para que se resuelva siempre el
+mapper más específico sin bloquear el event loop:
+
+| Excepción | HTTP | Origen |
+|---|---|---|
+| `StorageObjectNotFoundException` | 404 | Clave inexistente en el bucket (jerarquía compartida del módulo `core`, ver el README de `aws-s3-starter`). |
+| `StorageAccessDeniedException` | 403 | S3/LocalStack rechaza la operación por permisos. |
+| `StorageConfigurationException` | 400 | Límite de tamaño excedido, o un campo requerido (`bucketName`/`objectKey`) llega nulo o en blanco hasta el starter. |
+| `StorageConnectionException` | 503 | Fallo de conectividad con S3/LocalStack (timeout, conexión rechazada). |
+| `StorageException` (genérico) | 500 | Catch-all: cualquier otra excepción de la jerarquía no cubierta por un mapper más específico. |
+| `IllegalArgumentException` | 400 | Validación defensiva que no pasó por el starter (por ejemplo, argumentos inválidos detectados en este módulo). |
+| `ConstraintViolationException` | 400 | Bean Validation (`@Valid`/`@NotBlank`) sobre los DTOs de request o los parámetros `@BeanParam`/`@QueryParam` del controller — típicamente `bucketName`/`objectKey` faltantes. |
+
+En todos los casos el mensaje crudo de excepciones de infraestructura (por
+ejemplo, credenciales) nunca llega al cuerpo de la respuesta.
 
 Detalle completo, incluida la diferencia entre el `docker-compose.yml`
 explícito de este repo y los Dev Services de `quarkus-amazon-s3`, en

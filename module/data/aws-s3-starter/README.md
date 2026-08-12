@@ -70,7 +70,8 @@ Aplicación consumidora (microservicio Quarkus)
 │  ├── mapper/S3ResponseMapper    (SDK → domain)   │
 │  ├── audit/S3AuditLogger        (logging         │
 │  │       estructurado, sin datos sensibles)      │
-│  └── exception/S3ExceptionMapper (SDK → propias) │
+│  └── exception/StorageExceptionMapper (SDK →     │
+│          jerarquía compartida del módulo `core`) │
 └───────────────────┬────────────────────────────┘
                     │
 ┌───────────────────▼────────────────────────────┐
@@ -111,9 +112,10 @@ versión la gestiona el BOM `saywa-parent-bom`):
 ```
 
 `aws-s3-starter` ya trae transitivamente `io.quarkiverse.amazonservices:quarkus-amazon-s3`
-(que provee los beans `S3AsyncClient`/`S3Presigner`) y `quarkus-arc`. No es
-necesario declarar esas dependencias por separado en la aplicación
-consumidora.
+(que provee los beans `S3AsyncClient`/`S3Presigner`), `quarkus-arc` y
+`com.saywa.framework:core` (jerarquía de excepciones compartida `Storage*`,
+ver [Manejo de errores](#manejo-de-errores)). No es necesario declarar esas
+dependencias por separado en la aplicación consumidora.
 
 ## Configuración
 
@@ -133,7 +135,7 @@ por Quarkus/SmallRye Config en `application.properties` (o el
 | Propiedad | Tipo | Valor por defecto | Descripción |
 |---|---|---|---|
 | `compartamos.storage.s3.bucket-name` | `String` | *(sin valor por defecto, obligatoria)* | Se mantiene como configuración obligatoria a nivel de aplicación (validada al arrancar), pero **ya no se usa para resolver el bucket de ninguna operación** — cada llamada a `S3StorageService` indica su propio `bucketName` explícito (ver nota arriba). |
-| `compartamos.storage.s3.default-prefix` | `String` | `""` | Prefijo que se antepone a las claves de objeto cuando la operación no especifica uno propio (por ejemplo, al listar sin prefijo explícito). |
+| `compartamos.storage.s3.default-prefix` | `String` | `""` | Prefijo que `S3RequestFactory` antepone **automáticamente a la clave de todo objeto individual** (`upload`, `download`, `delete`, `copy`/`move`, `presigned`) que no la tenga ya — no es opt-in por operación. En `list`, en cambio, solo se usa como *fallback* cuando la llamada no pasa un `prefix` explícito; un `prefix` explícito no se combina con `default-prefix`. |
 | `compartamos.storage.s3.max-upload-size` | `long` (bytes) | `10485760` (10 MiB) | Tamaño máximo permitido para el contenido de un `upload()`. Si se excede, la operación falla **antes** de invocar al SDK. |
 | `compartamos.storage.s3.max-download-size` | `long` (bytes) | `10485760` (10 MiB) | Tamaño máximo permitido para el contenido de un `download()`. Se valida contra el `contentLength` obtenido vía `headObject` **antes** de transferir los bytes. |
 | `compartamos.storage.s3.presigned-ttl` | `Duration` (ISO-8601) | `PT15M` (15 minutos) | Tiempo de vida por defecto de las URLs prefirmadas cuando `presigned()` no especifica un TTL explícito. |
@@ -154,9 +156,10 @@ quarkus.s3.aws.credentials.type=default
 ```
 
 `S3ConfigurationValidator` falla rápido en el arranque (lanzando
-`IllegalArgumentException`) si: el bucket está vacío o en blanco, el
-prefijo por defecto es nulo, `max-upload-size` o `max-download-size` son
-menores o iguales a cero, o el prefijo por defecto contiene `"//"`.
+`IllegalArgumentException`) si, en este orden: el bucket está vacío o en
+blanco, el prefijo por defecto es nulo, `max-upload-size` es menor o igual a
+cero, `max-download-size` es menor o igual a cero, `presigned-ttl` es nulo o
+no estrictamente positivo, o el prefijo por defecto contiene `"//"`.
 
 ## Uso
 
@@ -247,25 +250,39 @@ public Uni<String> urlTemporalFactura(String bucketName, String objectKey) {
 
 El starter nunca propaga excepciones crudas del SDK de AWS
 (`software.amazon.awssdk.*`) como fallo de un `Uni`. Todas las operaciones
-fallan exclusivamente con una excepción de la jerarquía propia del paquete
-`com.saywa.framework.data.s3.exception`, traducida por `S3ExceptionMapper`
-preservando siempre la causa original vía `getCause()`:
+fallan exclusivamente con una excepción de la jerarquía de almacenamiento
+**compartida por el framework Saywa**, definida en el módulo `core`
+(`com.saywa.framework.core.error.exceptions`) — no es propia de este
+starter, sino el mismo tipo que usará `aws-s3-transfer-manager-starter` y
+cualquier otro starter de almacenamiento. La traduce
+`exception/StorageExceptionMapper` (paquete
+`com.saywa.framework.data.s3.exception`), preservando siempre la causa
+original vía `getCause()`:
 
 ```
 RuntimeException
-└── S3StorageException                 (raíz; error genérico no clasificado)
-    ├── S3ObjectNotFoundException      (clave inexistente en el bucket)
-    ├── S3AccessDeniedException        (S3 rechaza la operación, HTTP 403)
-    └── S3ConfigurationException       (config inválida o límite de tamaño excedido)
+└── StorageException                    (raíz abstracta, sealed — no instanciable)
+    ├── StorageObjectNotFoundException  (clave inexistente en el bucket)
+    ├── StorageAccessDeniedException    (S3 rechaza la operación, HTTP 403)
+    ├── StorageConfigurationException   (config inválida o límite de tamaño excedido)
+    ├── StorageConnectionException      (fallo de conectividad, sin respuesta del servicio)
+    └── StorageGenericException         (catch-all; cualquier otro error no clasificado)
 ```
 
-Todas exponen el mismo constructor público, `(String message, Throwable cause)`,
-por lo que siempre es seguro capturar por la clase base y examinar la causa:
+`StorageException` está declarada `sealed` con exactamente esas cinco
+subclases (`permits`): no puede instanciarse directamente y no puede
+extenderse fuera del módulo `core`, así que capturar por la clase base cubre
+siempre el universo completo de fallos posibles. Todas exponen el mismo
+constructor público, `(String message, Throwable cause)`, por lo que siempre
+es seguro capturar por la clase base y examinar la causa:
 
 ```java
+import com.saywa.framework.core.error.exceptions.StorageException;
+import com.saywa.framework.core.error.exceptions.StorageObjectNotFoundException;
+
 s3StorageService.download(bucketName, objectKey)
-    .onFailure(S3ObjectNotFoundException.class).recoverWithItem(this::contenidoPorDefecto)
-    .onFailure(S3StorageException.class).invoke(e ->
+    .onFailure(StorageObjectNotFoundException.class).recoverWithItem(this::contenidoPorDefecto)
+    .onFailure(StorageException.class).invoke(e ->
         log.error("Error al descargar {}: {}", objectKey, e.getMessage(), e.getCause()));
 ```
 
@@ -273,10 +290,11 @@ Casos típicos por excepción:
 
 | Excepción | Cuándo se produce |
 |---|---|
-| `S3ObjectNotFoundException` | `download`, `copy`/`move` (clave origen) o `presigned` sobre una clave que no existe en el bucket configurado. |
-| `S3AccessDeniedException` | Amazon S3 responde con HTTP 403 (permisos insuficientes de la identidad configurada). |
-| `S3ConfigurationException` | El contenido de un `upload` excede `max-upload-size`, o el objeto a descargar excede `max-download-size`, o hay un problema de credenciales/región/bucket detectado por el cliente antes de llamar al servicio. |
-| `S3StorageException` | Cualquier otro error no clasificado devuelto por Amazon S3 o el SDK, incluyendo un fallo de `delete` tras un `copy` exitoso dentro de `move`. |
+| `StorageObjectNotFoundException` | `download`, `copy`/`move` (clave origen) o `presigned` sobre una clave que no existe en el bucket configurado. Traducida desde `NoSuchKeyException` del SDK. |
+| `StorageAccessDeniedException` | Amazon S3 responde con HTTP 403 (`AccessDenied`, permisos insuficientes de la identidad configurada). Traducida desde `S3Exception`. |
+| `StorageConfigurationException` | El contenido de un `upload` excede `max-upload-size`, el objeto a descargar excede `max-download-size`, un `bucketName`/`objectKey` requerido llega nulo o en blanco (validación de `S3ObjectRequest`/`S3RequestFactory`, traducida desde `IllegalArgumentException`), o hay un problema de credenciales/región/bucket detectado por el cliente antes de contactar a S3. |
+| `StorageConnectionException` | Fallo de comunicación de red con S3 antes de que el servicio llegue a procesar la petición: timeout, conexión rechazada, DNS sin resolver. Traducida desde `SdkClientException` (cuando no aplica ninguno de los casos más específicos anteriores). |
+| `StorageGenericException` | Cualquier otro error no clasificado devuelto por Amazon S3 o el SDK (`SdkException` genérica, o cualquier `Throwable` no mapeado por una regla más específica), incluyendo un fallo de `delete` tras un `copy` exitoso dentro de `move`. |
 
 `delete(objectKey)` es una excepción a la regla de "objeto no encontrado":
 Amazon S3 no distingue entre borrar una clave existente o inexistente, así
@@ -323,14 +341,17 @@ framework Saywa provee, como módulo **separado y opcional**,
 `aws-s3-transfer-manager-starter`, construido sobre `S3TransferManager` del
 SDK de AWS.
 
-Los paquetes `config/`, `audit/` y `exception/` de este módulo están
-diseñados explícitamente para ser reutilizados (no duplicados) por
+Los paquetes `config/` y `audit/` de este módulo están diseñados
+explícitamente para ser reutilizados (no duplicados) por
 `aws-s3-transfer-manager-starter`, de forma que ambos starters comparten la
-misma configuración base (`compartamos.storage.s3.*`), la misma jerarquía de
-excepciones y el mismo mecanismo de auditoría. Un consumidor que solo
-necesite operaciones simples sobre objetos puede depender únicamente de
-`aws-s3-starter`; si además necesita transferencias masivas, añade
-`aws-s3-transfer-manager-starter` como dependencia adicional.
+misma configuración base (`compartamos.storage.s3.*`) y el mismo mecanismo
+de auditoría. La jerarquía de excepciones ya es compartida por diseño, al
+vivir en el módulo `core` en lugar de en `aws-s3-starter`: cada starter solo
+aporta su propio `StorageExceptionMapper` que traduce las excepciones del
+SDK a esa misma jerarquía (ver [Manejo de errores](#manejo-de-errores)). Un
+consumidor que solo necesite operaciones simples sobre objetos puede
+depender únicamente de `aws-s3-starter`; si además necesita transferencias
+masivas, añade `aws-s3-transfer-manager-starter` como dependencia adicional.
 
 ## Cómo ejecutar los tests
 
@@ -347,14 +368,18 @@ LocalStack en ejecución:
 mvn test -pl .
 ```
 
-### Tests de integración (perfil Maven aparte, requieren LocalStack)
+### Tests de integración (carpeta reservada, aún sin casos ni perfil Maven)
 
-Ubicados en `src/test/java/integration/`, pensados para levantar contexto
-Quarkus real contra un LocalStack en `http://localhost:4566` (ver
-`src/test/resources/application.properties`, que configura credenciales
-estáticas de prueba y el `%test.quarkus.s3.endpoint-override` para ese
-perfil). Consulta el perfil Maven correspondiente definido en el `pom.xml`
-del proyecto antes de ejecutarlos.
+`src/test/java/integration/` existe como carpeta reservada para tests que
+levanten contexto Quarkus real contra un LocalStack en
+`http://localhost:4566` (`src/test/resources/application.properties` ya
+configura credenciales estáticas de prueba y el
+`%test.quarkus.s3.endpoint-override` para ese caso), pero **hoy está vacía**
+y el `pom.xml` de este módulo no define un perfil Maven separado para
+ejecutarlas (a diferencia de `aws-s3-starter-deployment`, que sí expone
+`-Pintegration-tests`). Antes de añadir tests ahí, hay que dar de alta ese
+perfil (o excluir `**/integration/**` del `maven-surefire-plugin` heredado
+de `saywa-parent-bom`, que hoy solo filtra por nombre `**/*Test.java`).
 
 ## Sobre este repositorio
 
