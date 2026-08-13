@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.saywa.framework</groupId>
+        <artifactId>saywa-parent-bom</artifactId>
+        <version>1.1.0-SNAPSHOT</version>
+        <relativePath>../../parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aws-s3-starter-buildtime</artifactId>
+    <packaging>jar</packaging>
+    <name>Saywa AWS S3 Starter — Build Time</name>
+    <description>
+        Módulo de fase de build (deployment) de la extensión Quarkus
+        aws-s3-starter: contiene los @BuildStep que corren durante
+        augmentation (mvn quarkus:dev / mvn package) de cualquier app que
+        consuma aws-s3-starter. No se empaqueta ni se ejecuta en runtime —
+        solo lo usa Quarkus durante el build, nunca viaja al jar final de un
+        consumidor. Enlazado desde aws-s3-starter vía
+        META-INF/quarkus-extension.properties (deployment-artifact).
+    </description>
+
+    <dependencies>
+        <!-- Requerido por el resolver de Quarkus: todo artefacto de
+             deployment debe depender explícitamente de su runtime
+             correspondiente (si no, falla en build/augmentation con
+             "does not appear to depend on the corresponding runtime
+             artifact"), aunque S3DefaultConfigProcessor no importe ninguna
+             clase de aws-s3-starter directamente. -->
+        <dependency>
+            <groupId>com.saywa.framework</groupId>
+            <artifactId>aws-s3-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- API de @BuildStep/BuildProducer y los BuildItem de config
+             (RunTimeConfigurationDefaultBuildItem) e IsProduction, usados
+             por S3DefaultConfigProcessor. Versión gestionada por el
+             quarkus-bom importado en saywa-parent-bom. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-core-deployment</artifactId>
+        </dependency>
+
+        <!-- Test unitario puro de S3DefaultConfigProcessor: no necesita
+             bootear Quarkus (BuildProducer es solo una interfaz funcional),
+             así que alcanza con el aggregator de JUnit 5, versión
+             gestionada por el quarkus-bom importado en saywa-parent-bom. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

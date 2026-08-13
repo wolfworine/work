@@ -1,0 +1,39 @@
+# Índice de arquetipos convertidos a Markdown
+
+- **arq-001** — COVAIB DEEPLEARN (`arq-001__16eefdd1-220e-453f-b0fc-61fc0d293ce9.md`, 9877 palabras) — fuente: `16eefdd1-220e-453f-b0fc-61fc0d293ce9.pdf`
+- **arq-002** — SPEC-DRIVEN DEVELOPMENT (`arq-002__25f3bda8-144a-4c0f-b1a7-e788ca4bd081.md`, 1397 palabras) — fuente: `25f3bda8-144a-4c0f-b1a7-e788ca4bd081.pdf`
+- **arq-003** — Apuntes (`arq-003__441eef1f-7e75-43b0-9cd5-8955658b63ee.md`, 8072 palabras) — fuente: `441eef1f-7e75-43b0-9cd5-8955658b63ee.pdf`
+- **arq-004** — Google Java Style (`arq-004__61b92233-9b6a-4354-a827-a31594b34f08.md`, 5205 palabras) — fuente: `61b92233-9b6a-4354-a827-a31594b34f08.pdf`
+- **arq-005** — 220000  pprroommpptts (`arq-005__85ec15f7-7cfc-4223-9522-bf9f48813123.md`, 8396 palabras) — fuente: `85ec15f7-7cfc-4223-9522-bf9f48813123.pdf`
+- **arq-006** — PostgreSQL 18.4 Documentation (`arq-006__88263080-cb19-4251-9da2-966f40a709ef.md`, 1127568 palabras) — fuente: `88263080-cb19-4251-9da2-966f40a709ef.pdf`
+- **arq-007** — GUIA PRÁCTICA 2026 (`arq-007__9c992879-6638-476d-b43f-4f1680e92711.md`, 2081 palabras) — fuente: `9c992879-6638-476d-b43f-4f1680e92711.pdf`
+- **arq-008** — Learning SQL (`arq-008__oceanofpdf-com-learning-sql-alan-beaulieu.md`, 108148 palabras) — fuente: `_OceanofPDF.com_Learning_SQL_-_Alan_Beaulieu.pdf`
+- **arq-009** — OceanofPDF.com (`arq-009__oceanofpdf-com-sql-quickstart-guide-walter-shields.md`, 43007 palabras) — fuente: `_OceanofPDF.com_SQL_QuickStart_Guide_-_Walter_Shields.pdf`
+- **arq-010** — AUTOMATIZACIONES (`arq-010__c17da176-21f0-4560-853a-ad1b1b2b175b.md`, 61 palabras) — fuente: `c17da176-21f0-4560-853a-ad1b1b2b175b.pdf`
+- **arq-011** — Spring without... (`arq-011__c19d5c5f-0650-4517-bb66-42200fac2087.md`, 912 palabras) — fuente: `c19d5c5f-0650-4517-bb66-42200fac2087.pdf`
+- **arq-012** — Docker (`arq-012__ca605fc0-6019-48d9-aabf-68a4c24b1310.md`, 2057 palabras) — fuente: `ca605fc0-6019-48d9-aabf-68a4c24b1310.pdf`
+- **arq-013** — Code with (`arq-013__code-with-java-21-a-practical-approach-for-building-robust-and-efficient-applica.md`, 93301 palabras) — fuente: `code-with-java-21-a-practical-approach-for-building-robust-and-efficient-applications.pdf`
+- **arq-014** — CRACKING (`arq-014__cracking-the-coding-interview-6th-edition-189-programming-questions-and-solution.md`, 352652 palabras) — fuente: `Cracking-the-Coding-Interview-6th-Edition-189-Programming-Questions-and-Solutions.pdf`
+- **arq-015** — Designing	Hexagonal	Architecture	with	Java (`arq-015__designing-hexagonal-architecture-with-java-2nbsped-9781837635115.md`, 97005 palabras) — fuente: `designing-hexagonal-architecture-with-java-2nbsped-9781837635115.pdf`
+- **arq-016** — Designing Hexagonal Architecture (`arq-016__designing-hexagonal-architecture-with-java-build-maintainable-and-long-lasting-a.md`, 101279 palabras) — fuente: `designing-hexagonal-architecture-with-java-build-maintainable-and-long-lasting-applications-with-java-and-quarkus-team-ira-1837635110-9781837635115_compress.pdf`
+- **arq-017** — DevOps Tools for Java (`arq-017__devops-tools-for-java-developers-early-release-9781492084020-9781492083955-compr.md`, 72051 palabras) — fuente: `devops-tools-for-java-developers-early-release-9781492084020-9781492083955_compress.pdf`
+- **arq-018** — AUTOMATIZACIONES (`arq-018__e93133a8-16e1-4dad-afa6-cc5e6f03a1ad.md`, 61 palabras) — fuente: `e93133a8-16e1-4dad-afa6-cc5e6f03a1ad.pdf`
+- **arq-019** — | Effective    | Kafka        |             |           |              |         | (`arq-019__effective-kafka-a-hands-on-guide-to-building-robust-and-scalable-event-driven-ap.md`, 96129 palabras) — fuente: `effective-kafka-a-hands-on-guide-to-building-robust-and-scalable-event-driven-applications-with-code-examples-in-java_compress.pdf`
+- **arq-020** — Evaluación: JAVA (`arq-020__ejercicio-java-especialista-integracion-5-1-1-1-1.md`, 342 palabras) — fuente: `Ejercicio_JAVA-Especialista_Integracion (5) (1) (1) (1) (1).pdf`
+- **arq-021** — Enterprise Java (`arq-021__enterprise-java-design-patterns-ebook.md`, 10517 palabras) — fuente: `enterprise-java-design-patterns-ebook.pdf`
+- **arq-022** — [ API TESTING GUIDE ] (`arq-022__fd44d6c9-abfa-4f1a-a50f-bca0a42a65c2.md`, 4330 palabras) — fuente: `fd44d6c9-abfa-4f1a-a50f-bca0a42a65c2.pdf`
+- **arq-023** — Git y GitHub desde cero (`arq-023__git-github.md`, 59996 palabras) — fuente: `git-github.pdf`
+- **arq-024** — Introduction to Programming with Greenfoot (`arq-024__introduction-to-programming-with-greenfoot-object-oriented-programming-in-java-w.md`, 62032 palabras) — fuente: `introduction-to-programming-with-greenfoot-object-oriented-programming-in-java-with-games-and-simulations-9780136037538-0136037534_compress.pdf`
+- **arq-025** — William Denniss (`arq-025__kubernetes-for-developers-1nbsped-1617297178-9781617297175-compress.md`, 107379 palabras) — fuente: `kubernetes-for-developers-1nbsped-1617297178-9781617297175_compress.pdf`
+- **arq-026** — 1. Preface (`arq-026__learning-java-an-introduction-to-real-world-programming-with-java-5nbsped-compre.md`, 171908 palabras) — fuente: `learning-java-an-introduction-to-real-world-programming-with-java-5nbsped_compress.pdf`
+- **arq-027** — Lambdas, streams, functional and reactive programming (`arq-027__modern-java-in-action-lambda-streams-functional-and-reactive-programming-2nbsped.md`, 202332 palabras) — fuente: `modern-java-in-action-lambda-streams-functional-and-reactive-programming-2nbsped-9781617293566_compress.pdf`
+- **arq-028** — Object Oriented Programming with (`arq-028__object-oriented-programming-with-java-2147483648-2147483647.md`, 39599 palabras) — fuente: `object-oriented-programming-with-java-2147483648-2147483647.pdf`
+- **arq-029** — PostgreSQL 18.3 Documentation (`arq-029__postgresql-18-a4.md`, 1124075 palabras) — fuente: `postgresql-18-A4.pdf`
+- **arq-030** — Pro Git (`arq-030__progit.md`, 149268 palabras) — fuente: `progit.pdf`
+- **arq-031** — Programming	With	Java (`arq-031__programming-with-java-mastering-programming-languages-series.md`, 68778 palabras) — fuente: `programming-with-java-mastering-programming-languages-series.pdf`
+- **arq-032** — Robert Hedgpeth (`arq-032__r2dbc-revealed-reactive-relational-database-connectivity-for-java-and-jvm-progra.md`, 37936 palabras) — fuente: `r2dbc-revealed-reactive-relational-database-connectivity-for-java-and-jvm-programmers-9781484269893.pdf`
+- **arq-033** — Reactive Java (`arq-033__reactive-java-programming-1st-ed-2016-9781484214299-9781484214282-2016957883-148.md`, 6 palabras) — fuente: `reactive-java-programming-1st-ed-2016-9781484214299-9781484214282-2016957883-1484214293-1484214285_compress.pdf`
+- **arq-034** — Reactive	Systems	in	Java (`arq-034__reactive-systems-in-java-9781492091721-9781492091653.md`, 45987 palabras) — fuente: `reactive-systems-in-java-9781492091721-9781492091653.pdf`
+- **arq-035** — 1 (`arq-035__solid-the-software-design-and-architecture-handbook-compress.md`, 76483 palabras) — fuente: `solid-the-software-design-and-architecture-handbook_compress.pdf`
+- **arq-036** — BIRMINGHAM—MUMBAI (`arq-036__test-driven-development-with-java-create-higher-quality-software-by-writing-test.md`, 95034 palabras) — fuente: `test-driven-development-with-java-create-higher-quality-software-by-writing-tests-first-with-solid-and-hexagonal-architecture-9781803236230-180323623x.pdf`
+- **arq-037** — Asynchronous and Reactive Java (`arq-037__vertx-in-action-asynchronous-and-reactive-java-1617295620-9781617295621-compress.md`, 123147 palabras) — fuente: `vertx-in-action-asynchronous-and-reactive-java-1617295620-9781617295621_compress.pdf`

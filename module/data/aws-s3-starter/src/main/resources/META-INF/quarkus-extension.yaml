@@ -1,0 +1,5 @@
+name: "Saywa AWS S3 Starter"
+description: "Reactive Amazon S3 storage starter for Saywa framework Quarkus microservices."
+metadata:
+  config:
+    - "compartamos.storage.s3."

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.saywa.framework</groupId>
+        <artifactId>saywa-parent-bom</artifactId>
+        <version>1.1.0-SNAPSHOT</version>
+        <relativePath>../../parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aws-s3-starter-smoke</artifactId>
+    <packaging>jar</packaging>
+    <name>Saywa AWS S3 Starter — Smoke Test</name>
+    <description>
+        Consumidor descartable de aws-s3-starter, sin compartamos.storage.s3.*
+        propio: existe solo para probar manualmente que
+        S3DefaultConfigProcessor (aws-s3-starter-buildtime) aplica esos
+        defaults en dev/test, y que cada operación de S3StorageService
+        resuelve su propio bucketName explícito contra dos buckets
+        distintos. No es parte de la API pública del framework — se puede
+        borrar sin afectar a nadie.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.saywa.framework</groupId>
+            <artifactId>aws-s3-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Jerarquía de excepciones compartida, usada directamente por
+             SmokeRunner para imprimir un mensaje legible por tipo de fallo -->
+        <dependency>
+            <groupId>com.saywa.framework</groupId>
+            <artifactId>core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Cliente HTTP async requerido por quarkus-amazon-s3 para producir
+             S3AsyncClient (mismo motivo que en aws-s3-starter-deployment) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>netty-nio-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.quarkus.platform</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

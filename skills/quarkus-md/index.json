@@ -1,0 +1,74 @@
+[
+  {
+    "id": "qrk-001",
+    "source_file": "applied-ai-enterprise-java-ebook.pdf",
+    "md_file": "qrk-001__applied-ai-enterprise-java-ebook.md",
+    "status": "ok",
+    "title_guess": "Java",
+    "words": 104760
+  },
+  {
+    "id": "qrk-002",
+    "source_file": "hands-on-cloud-native-applications-with-java-and-quarkus-1st-ed_compress.pdf",
+    "md_file": "qrk-002__hands-on-cloud-native-applications-with-java-and-quarkus-1st-ed-compress.md",
+    "status": "ok",
+    "title_guess": "Hands-On Cloud-Native",
+    "words": 60984
+  },
+  {
+    "id": "qrk-003",
+    "source_file": "introduction-to-java-through-game-development-learn-java-programming-skills-by-working-with-video-games_compress.pdf",
+    "md_file": "qrk-003__introduction-to-java-through-game-development-learn-java-programming-skills-by-w.md",
+    "status": "ok",
+    "title_guess": "Introduction to Java Through Game DevelopmentLearn Java Programming Skills by  Working with Video Games—Victor G. Brusca",
+    "words": 63699
+  },
+  {
+    "id": "qrk-004",
+    "source_file": "kubernetes-for-developers-final-release-9781617297175_compress.pdf",
+    "md_file": "qrk-004__kubernetes-for-developers-final-release-9781617297175-compress.md",
+    "status": "ok",
+    "title_guess": "William Denniss",
+    "words": 107379
+  },
+  {
+    "id": "qrk-005",
+    "source_file": "quarkus-cookbook-kubernetes-optimized-java-solutions-9781492062653.pdf",
+    "md_file": "qrk-005__quarkus-cookbook-kubernetes-optimized-java-solutions-9781492062653.md",
+    "status": "ok",
+    "title_guess": "1.\t Foreword",
+    "words": 66761
+  },
+  {
+    "id": "qrk-006",
+    "source_file": "quarkus-fascicle-practising-v1.pdf",
+    "md_file": "qrk-006__quarkus-fascicle-practising-v1.md",
+    "status": "ok",
+    "title_guess": "Practising Quarkus",
+    "words": 58431
+  },
+  {
+    "id": "qrk-007",
+    "source_file": "quarkus-fascicle-understanding-v1.pdf",
+    "md_file": "qrk-007__quarkus-fascicle-understanding-v1.md",
+    "status": "ok",
+    "title_guess": "Understanding Quarkus",
+    "words": 126488
+  },
+  {
+    "id": "qrk-008",
+    "source_file": "Quarkus-For-Spring-Developers-Red-Hat.pdf",
+    "md_file": "qrk-008__quarkus-for-spring-developers-red-hat.md",
+    "status": "ok",
+    "title_guess": "Contents",
+    "words": 49762
+  },
+  {
+    "id": "qrk-009",
+    "source_file": "quarkus-in-action-meap-v03_compress.pdf",
+    "md_file": "qrk-009__quarkus-in-action-meap-v03-compress.md",
+    "status": "ok",
+    "title_guess": "Quarkus in Action MEAP V03",
+    "words": 43489
+  }
+]

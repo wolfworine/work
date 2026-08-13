@@ -1,0 +1,298 @@
+[
+  {
+    "id": "arq-001",
+    "source_file": "16eefdd1-220e-453f-b0fc-61fc0d293ce9.pdf",
+    "md_file": "arq-001__16eefdd1-220e-453f-b0fc-61fc0d293ce9.md",
+    "status": "ok",
+    "title_guess": "COVAIB DEEPLEARN",
+    "words": 9877
+  },
+  {
+    "id": "arq-002",
+    "source_file": "25f3bda8-144a-4c0f-b1a7-e788ca4bd081.pdf",
+    "md_file": "arq-002__25f3bda8-144a-4c0f-b1a7-e788ca4bd081.md",
+    "status": "ok",
+    "title_guess": "SPEC-DRIVEN DEVELOPMENT",
+    "words": 1397
+  },
+  {
+    "id": "arq-003",
+    "source_file": "441eef1f-7e75-43b0-9cd5-8955658b63ee.pdf",
+    "md_file": "arq-003__441eef1f-7e75-43b0-9cd5-8955658b63ee.md",
+    "status": "ok",
+    "title_guess": "Apuntes",
+    "words": 8072
+  },
+  {
+    "id": "arq-004",
+    "source_file": "61b92233-9b6a-4354-a827-a31594b34f08.pdf",
+    "md_file": "arq-004__61b92233-9b6a-4354-a827-a31594b34f08.md",
+    "status": "ok",
+    "title_guess": "Google Java Style",
+    "words": 5205
+  },
+  {
+    "id": "arq-005",
+    "source_file": "85ec15f7-7cfc-4223-9522-bf9f48813123.pdf",
+    "md_file": "arq-005__85ec15f7-7cfc-4223-9522-bf9f48813123.md",
+    "status": "ok",
+    "title_guess": "220000  pprroommpptts",
+    "words": 8396
+  },
+  {
+    "id": "arq-006",
+    "source_file": "88263080-cb19-4251-9da2-966f40a709ef.pdf",
+    "md_file": "arq-006__88263080-cb19-4251-9da2-966f40a709ef.md",
+    "status": "ok",
+    "title_guess": "PostgreSQL 18.4 Documentation",
+    "words": 1127568
+  },
+  {
+    "id": "arq-007",
+    "source_file": "9c992879-6638-476d-b43f-4f1680e92711.pdf",
+    "md_file": "arq-007__9c992879-6638-476d-b43f-4f1680e92711.md",
+    "status": "ok",
+    "title_guess": "GUIA PRÁCTICA 2026",
+    "words": 2081
+  },
+  {
+    "id": "arq-008",
+    "source_file": "_OceanofPDF.com_Learning_SQL_-_Alan_Beaulieu.pdf",
+    "md_file": "arq-008__oceanofpdf-com-learning-sql-alan-beaulieu.md",
+    "status": "ok",
+    "title_guess": "Learning SQL",
+    "words": 108148
+  },
+  {
+    "id": "arq-009",
+    "source_file": "_OceanofPDF.com_SQL_QuickStart_Guide_-_Walter_Shields.pdf",
+    "md_file": "arq-009__oceanofpdf-com-sql-quickstart-guide-walter-shields.md",
+    "status": "ok",
+    "title_guess": "OceanofPDF.com",
+    "words": 43007
+  },
+  {
+    "id": "arq-010",
+    "source_file": "c17da176-21f0-4560-853a-ad1b1b2b175b.pdf",
+    "md_file": "arq-010__c17da176-21f0-4560-853a-ad1b1b2b175b.md",
+    "status": "ok",
+    "title_guess": "AUTOMATIZACIONES",
+    "words": 61
+  },
+  {
+    "id": "arq-011",
+    "source_file": "c19d5c5f-0650-4517-bb66-42200fac2087.pdf",
+    "md_file": "arq-011__c19d5c5f-0650-4517-bb66-42200fac2087.md",
+    "status": "ok",
+    "title_guess": "Spring without...",
+    "words": 912
+  },
+  {
+    "id": "arq-012",
+    "source_file": "ca605fc0-6019-48d9-aabf-68a4c24b1310.pdf",
+    "md_file": "arq-012__ca605fc0-6019-48d9-aabf-68a4c24b1310.md",
+    "status": "ok",
+    "title_guess": "Docker",
+    "words": 2057
+  },
+  {
+    "id": "arq-013",
+    "source_file": "code-with-java-21-a-practical-approach-for-building-robust-and-efficient-applications.pdf",
+    "md_file": "arq-013__code-with-java-21-a-practical-approach-for-building-robust-and-efficient-applica.md",
+    "status": "ok",
+    "title_guess": "Code with",
+    "words": 93301
+  },
+  {
+    "id": "arq-014",
+    "source_file": "Cracking-the-Coding-Interview-6th-Edition-189-Programming-Questions-and-Solutions.pdf",
+    "md_file": "arq-014__cracking-the-coding-interview-6th-edition-189-programming-questions-and-solution.md",
+    "status": "ok",
+    "title_guess": "CRACKING",
+    "words": 352652
+  },
+  {
+    "id": "arq-015",
+    "source_file": "designing-hexagonal-architecture-with-java-2nbsped-9781837635115.pdf",
+    "md_file": "arq-015__designing-hexagonal-architecture-with-java-2nbsped-9781837635115.md",
+    "status": "ok",
+    "title_guess": "Designing\tHexagonal\tArchitecture\twith\tJava",
+    "words": 97005
+  },
+  {
+    "id": "arq-016",
+    "source_file": "designing-hexagonal-architecture-with-java-build-maintainable-and-long-lasting-applications-with-java-and-quarkus-team-ira-1837635110-9781837635115_compress.pdf",
+    "md_file": "arq-016__designing-hexagonal-architecture-with-java-build-maintainable-and-long-lasting-a.md",
+    "status": "ok",
+    "title_guess": "Designing Hexagonal Architecture",
+    "words": 101279
+  },
+  {
+    "id": "arq-017",
+    "source_file": "devops-tools-for-java-developers-early-release-9781492084020-9781492083955_compress.pdf",
+    "md_file": "arq-017__devops-tools-for-java-developers-early-release-9781492084020-9781492083955-compr.md",
+    "status": "ok",
+    "title_guess": "DevOps Tools for Java",
+    "words": 72051
+  },
+  {
+    "id": "arq-018",
+    "source_file": "e93133a8-16e1-4dad-afa6-cc5e6f03a1ad.pdf",
+    "md_file": "arq-018__e93133a8-16e1-4dad-afa6-cc5e6f03a1ad.md",
+    "status": "ok",
+    "title_guess": "AUTOMATIZACIONES",
+    "words": 61
+  },
+  {
+    "id": "arq-019",
+    "source_file": "effective-kafka-a-hands-on-guide-to-building-robust-and-scalable-event-driven-applications-with-code-examples-in-java_compress.pdf",
+    "md_file": "arq-019__effective-kafka-a-hands-on-guide-to-building-robust-and-scalable-event-driven-ap.md",
+    "status": "ok",
+    "title_guess": "| Effective    | Kafka        |             |           |              |         |",
+    "words": 96129
+  },
+  {
+    "id": "arq-020",
+    "source_file": "Ejercicio_JAVA-Especialista_Integracion (5) (1) (1) (1) (1).pdf",
+    "md_file": "arq-020__ejercicio-java-especialista-integracion-5-1-1-1-1.md",
+    "status": "ok",
+    "title_guess": "Evaluación: JAVA",
+    "words": 342
+  },
+  {
+    "id": "arq-021",
+    "source_file": "enterprise-java-design-patterns-ebook.pdf",
+    "md_file": "arq-021__enterprise-java-design-patterns-ebook.md",
+    "status": "ok",
+    "title_guess": "Enterprise Java",
+    "words": 10517
+  },
+  {
+    "id": "arq-022",
+    "source_file": "fd44d6c9-abfa-4f1a-a50f-bca0a42a65c2.pdf",
+    "md_file": "arq-022__fd44d6c9-abfa-4f1a-a50f-bca0a42a65c2.md",
+    "status": "ok",
+    "title_guess": "[ API TESTING GUIDE ]",
+    "words": 4330
+  },
+  {
+    "id": "arq-023",
+    "source_file": "git-github.pdf",
+    "md_file": "arq-023__git-github.md",
+    "status": "ok",
+    "title_guess": "Git y GitHub desde cero",
+    "words": 59996
+  },
+  {
+    "id": "arq-024",
+    "source_file": "introduction-to-programming-with-greenfoot-object-oriented-programming-in-java-with-games-and-simulations-9780136037538-0136037534_compress.pdf",
+    "md_file": "arq-024__introduction-to-programming-with-greenfoot-object-oriented-programming-in-java-w.md",
+    "status": "ok",
+    "title_guess": "Introduction to Programming with Greenfoot",
+    "words": 62032
+  },
+  {
+    "id": "arq-025",
+    "source_file": "kubernetes-for-developers-1nbsped-1617297178-9781617297175_compress.pdf",
+    "md_file": "arq-025__kubernetes-for-developers-1nbsped-1617297178-9781617297175-compress.md",
+    "status": "ok",
+    "title_guess": "William Denniss",
+    "words": 107379
+  },
+  {
+    "id": "arq-026",
+    "source_file": "learning-java-an-introduction-to-real-world-programming-with-java-5nbsped_compress.pdf",
+    "md_file": "arq-026__learning-java-an-introduction-to-real-world-programming-with-java-5nbsped-compre.md",
+    "status": "ok",
+    "title_guess": "1. Preface",
+    "words": 171908
+  },
+  {
+    "id": "arq-027",
+    "source_file": "modern-java-in-action-lambda-streams-functional-and-reactive-programming-2nbsped-9781617293566_compress.pdf",
+    "md_file": "arq-027__modern-java-in-action-lambda-streams-functional-and-reactive-programming-2nbsped.md",
+    "status": "ok",
+    "title_guess": "Lambdas, streams, functional and reactive programming",
+    "words": 202332
+  },
+  {
+    "id": "arq-028",
+    "source_file": "object-oriented-programming-with-java-2147483648-2147483647.pdf",
+    "md_file": "arq-028__object-oriented-programming-with-java-2147483648-2147483647.md",
+    "status": "ok",
+    "title_guess": "Object Oriented Programming with",
+    "words": 39599
+  },
+  {
+    "id": "arq-029",
+    "source_file": "postgresql-18-A4.pdf",
+    "md_file": "arq-029__postgresql-18-a4.md",
+    "status": "ok",
+    "title_guess": "PostgreSQL 18.3 Documentation",
+    "words": 1124075
+  },
+  {
+    "id": "arq-030",
+    "source_file": "progit.pdf",
+    "md_file": "arq-030__progit.md",
+    "status": "ok",
+    "title_guess": "Pro Git",
+    "words": 149268
+  },
+  {
+    "id": "arq-031",
+    "source_file": "programming-with-java-mastering-programming-languages-series.pdf",
+    "md_file": "arq-031__programming-with-java-mastering-programming-languages-series.md",
+    "status": "ok",
+    "title_guess": "Programming\tWith\tJava",
+    "words": 68778
+  },
+  {
+    "id": "arq-032",
+    "source_file": "r2dbc-revealed-reactive-relational-database-connectivity-for-java-and-jvm-programmers-9781484269893.pdf",
+    "md_file": "arq-032__r2dbc-revealed-reactive-relational-database-connectivity-for-java-and-jvm-progra.md",
+    "status": "ok",
+    "title_guess": "Robert Hedgpeth",
+    "words": 37936
+  },
+  {
+    "id": "arq-033",
+    "source_file": "reactive-java-programming-1st-ed-2016-9781484214299-9781484214282-2016957883-1484214293-1484214285_compress.pdf",
+    "md_file": "arq-033__reactive-java-programming-1st-ed-2016-9781484214299-9781484214282-2016957883-148.md",
+    "status": "ok",
+    "title_guess": "Reactive Java",
+    "words": 6
+  },
+  {
+    "id": "arq-034",
+    "source_file": "reactive-systems-in-java-9781492091721-9781492091653.pdf",
+    "md_file": "arq-034__reactive-systems-in-java-9781492091721-9781492091653.md",
+    "status": "ok",
+    "title_guess": "Reactive\tSystems\tin\tJava",
+    "words": 45987
+  },
+  {
+    "id": "arq-035",
+    "source_file": "solid-the-software-design-and-architecture-handbook_compress.pdf",
+    "md_file": "arq-035__solid-the-software-design-and-architecture-handbook-compress.md",
+    "status": "ok",
+    "title_guess": "1",
+    "words": 76483
+  },
+  {
+    "id": "arq-036",
+    "source_file": "test-driven-development-with-java-create-higher-quality-software-by-writing-tests-first-with-solid-and-hexagonal-architecture-9781803236230-180323623x.pdf",
+    "md_file": "arq-036__test-driven-development-with-java-create-higher-quality-software-by-writing-test.md",
+    "status": "ok",
+    "title_guess": "BIRMINGHAM—MUMBAI",
+    "words": 95034
+  },
+  {
+    "id": "arq-037",
+    "source_file": "vertx-in-action-asynchronous-and-reactive-java-1617295620-9781617295621_compress.pdf",
+    "md_file": "arq-037__vertx-in-action-asynchronous-and-reactive-java-1617295620-9781617295621-compress.md",
+    "status": "ok",
+    "title_guess": "Asynchronous and Reactive Java",
+    "words": 123147
+  }
+]
