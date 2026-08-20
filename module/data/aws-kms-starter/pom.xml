@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.saywa.framework</groupId>
+        <artifactId>saywa-parent-bom</artifactId>
+        <version>1.1.0-SNAPSHOT</version>
+        <relativePath>../../parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aws-kms-starter</artifactId>
+    <packaging>jar</packaging>
+    <name>Saywa AWS KMS Starter</name>
+    <description>Starter base para integraciones con AWS KMS (cifrado simétrico, envelope encryption y MAC) en servicios Quarkus del framework Saywa.</description>
+
+    <dependencies>
+
+        <!-- Jerarquía de excepciones y contrato de error (ApiError/ErrorType) compartidos del framework -->
+        <dependency>
+            <groupId>com.saywa.framework</groupId>
+            <artifactId>core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Quarkus Amazon KMS (versión gestionada por saywa-parent-bom) -->
+        <dependency>
+            <groupId>io.quarkiverse.amazonservices</groupId>
+            <artifactId>quarkus-amazon-kms</artifactId>
+        </dependency>
+
+        <!-- Cliente async del SDK (KmsAsyncClient): Netty en vez de url-connection-client,
+             que solo sirve para el cliente síncrono. Es el mismo patrón reactivo que
+             aws-s3-starter ya usa con S3AsyncClient. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>netty-nio-client</artifactId>
+        </dependency>
+
+        <!-- Quarkus CDI -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+
+        <!-- Lombok: únicamente como annotation processor en tiempo de compilación.
+             Scope "provided": no se empaqueta en el JAR final ni se propaga
+             transitivamente a los consumidores del starter. Versión gestionada
+             por saywa-parent-bom. -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+</project>

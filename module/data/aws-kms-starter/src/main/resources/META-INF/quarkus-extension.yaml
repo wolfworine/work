@@ -1,0 +1,5 @@
+name: "Saywa AWS KMS Starter"
+description: "Reactive AWS KMS crypto starter (symmetric encrypt/decrypt, envelope encryption and MAC) for Saywa framework Quarkus microservices."
+metadata:
+  config:
+    - "compartamos.crypto.kms."

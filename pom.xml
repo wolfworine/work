@@ -24,9 +24,7 @@
         <module>module/core</module>
         <module>module/parent</module>
         <module>module/data/aws-s3-starter</module>
-        <module>module/data/aws-s3-starter-buildtime</module>
-        <module>module/data/aws-s3-starter-deployment</module>
-        <module>module/data/aws-s3-starter-smoke</module>
+        <module>module/data/aws-kms-starter</module>
     </modules>
 
 </project>
