@@ -2,7 +2,7 @@
 
 Librería de skills agnósticos (no atados a un proyecto puntual) para que cualquier agente los consulte al escribir, revisar o refactorizar código backend. Cada carpeta es un skill independiente con su `SKILL.md` (frontmatter `name` + `description` que dispara el uso, y un cuerpo operativo con heurísticas y ejemplos).
 
-**Estado:** 33 skills vigentes (actualizado 2026-11-13). Se retiraron los libros fuente (`arquetipos-md`, `quarkus-md`) y los skills superados.
+**Estado:** 34 skills vigentes (actualizado 2026-11-13). Se retiraron los libros fuente (`arquetipos-md`, `quarkus-md`) y los skills superados.
 
 **Criterio de fuentes:** los skills nuevos se construyen solo con documentación del proveedor o del framework (Oracle/OpenJDK, Quarkus, AWS, Microsoft, etc.). Cada skill lista sus fuentes y marca lo que no pudo verificar.
 
@@ -49,6 +49,7 @@ Librería de skills agnósticos (no atados a un proyecto puntual) para que cualq
 
 | Skill | Cuándo se activa |
 |---|---|
+| [`dynamodb-single-table-quarkus`](dynamodb-single-table-quarkus/SKILL.md) | DynamoDB: single-table (varias entidades en una tabla física), claves, GSI, límites, transacciones, locking optimista, Quarkus + Enhanced Client |
 | [`redis-oss-elasticache`](redis-oss-elasticache/SKILL.md) | Amazon ElastiCache for Redis OSS 7.1: versiones, cluster mode, seguridad, eviction, clientes Java |
 | [`postgresql-practical-reference`](postgresql-practical-reference/SKILL.md) | Esquemas, índices, EXPLAIN, JSONB en Postgres |
 | [`sql-fundamentals`](sql-fundamentals/SKILL.md) | SQL estándar: JOIN, NULL, GROUP BY, CTEs, transacciones |
